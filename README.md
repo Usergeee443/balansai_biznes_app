@@ -105,9 +105,84 @@ Telegram bot'da Mini App'ni sozlash:
 4. Web App URL: `https://your-domain.com/`
 5. Web App icon yuklash
 
+## Render'ga Deploy Qilish
+
+### 1. GitHub'ga yuklash
+
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/yourusername/balansai-biznes-app.git
+git push -u origin main
+```
+
+### 2. Render'da yangi Web Service yaratish
+
+1. [Render Dashboard](https://dashboard.render.com/) ga kiring
+2. "New +" → "Web Service" ni tanlang
+3. GitHub repository'ni ulang
+4. Quyidagi sozlamalarni kiriting:
+   - **Name**: `balansai-biznes-app`
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+
+### 3. Environment Variables qo'shish
+
+Render Dashboard'da "Environment" bo'limiga quyidagi o'zgaruvchilarni qo'shing:
+
+```
+DB_HOST=your_mysql_host
+DB_USER=your_mysql_user
+DB_PASSWORD=your_mysql_password
+DB_NAME=your_database_name
+BOT_TOKEN=your_telegram_bot_token
+SECRET_KEY=your-strong-secret-key-here
+FLASK_ENV=production
+```
+
+**Muhim**: 
+- `SECRET_KEY` - kuchli random string bo'lishi kerak (masalan: `openssl rand -hex 32`)
+- Database - Render'da MySQL service yaratish yoki tashqi MySQL server ishlatish
+
+### 4. Database sozlash
+
+Agar Render'da MySQL service yaratmoqchi bo'lsangiz:
+
+1. "New +" → "MySQL" ni tanlang
+2. Database yarating
+3. `database_schema.sql` faylini bajarish:
+   ```bash
+   mysql -h <host> -u <user> -p <database> < database_schema.sql
+   ```
+4. Database connection ma'lumotlarini environment variables'ga qo'shing
+
+### 5. Telegram Mini App URL'ni yangilash
+
+Deploy qilingan URL'ni Telegram bot'ga qo'shing:
+
+1. BotFather'da `/newapp` yoki `/editapp`
+2. Web App URL: `https://your-app-name.onrender.com/`
+
+### 6. Custom Domain (ixtiyoriy)
+
+Agar custom domain ishlatmoqchi bo'lsangiz:
+
+1. Render Dashboard'da "Settings" → "Custom Domain"
+2. Domain'ni qo'shing va DNS sozlamalarini bajarish
+
+## Production Sozlamalari
+
+- `FLASK_ENV=production` - Debug mode o'chiriladi
+- `SECRET_KEY` - Kuchli secret key ishlatilishi kerak
+- Database - Production-ready MySQL server
+- HTTPS - Render avtomatik HTTPS ta'minlaydi
+
 ## Eslatmalar
 
 - Barcha API endpoint'lar Telegram auth talab qiladi
 - `X-Telegram-Init-Data` header'da initData bo'lishi kerak
 - Database bot bilan bir xil database bilan ishlaydi
+- Render'da free tier'da app 15 daqiqa ishlatilmaganda uxlaydi (cold start ~30 soniya)
 

@@ -21,7 +21,10 @@ def get_db_connection():
             database=os.getenv('DB_NAME', 'balansai_db'),
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor,
-            autocommit=False
+            autocommit=False,
+            connect_timeout=10,
+            read_timeout=30,
+            write_timeout=30
         )
         return connection
     except Exception as e:

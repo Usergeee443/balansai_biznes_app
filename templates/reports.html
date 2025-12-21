@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hisobotlar - Balans AI</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen pb-20">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="/" class="text-white">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </a>
+                    <h1 class="text-xl font-bold">Hisobotlar</h1>
+                </div>
+            </div>
+        </header>
+
+        <!-- Period Selector -->
+        <div class="p-4 bg-white border-b">
+            <div class="flex space-x-2 overflow-x-auto">
+                <button class="period-btn active" data-period="day">Kun</button>
+                <button class="period-btn" data-period="week">Hafta</button>
+                <button class="period-btn" data-period="month">Oy</button>
+                <button class="period-btn" data-period="year">Yil</button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="p-4">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-gray-500 text-sm mb-1">Jami kirim</p>
+                    <p class="text-2xl font-bold text-green-600" id="totalIncome">0 UZS</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-gray-500 text-sm mb-1">Jami chiqim</p>
+                    <p class="text-2xl font-bold text-red-600" id="totalExpense">0 UZS</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <p class="text-gray-500 text-sm mb-1">Foyda</p>
+                <p class="text-2xl font-bold" id="profit">0 UZS</p>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="p-4">
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <h3 class="font-semibold mb-3">Chiqimlar bo'yicha kategoriyalar</h3>
+                <canvas id="categoriesChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Warehouse Stats -->
+        <div class="p-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h3 class="font-semibold mb-3">Ombor statistikasi</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Jami mahsulotlar:</span>
+                        <span class="font-semibold" id="totalProducts">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Ombor qiymati:</span>
+                        <span class="font-semibold" id="warehouseValue">0 UZS</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Kam qolganlar:</span>
+                        <span class="font-semibold text-red-600" id="lowStock">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .period-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            color: #6b7280;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .period-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+    </style>
+
+    <script src="/static/js/cache.js"></script>
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/reports.js"></script>
+    <script>
+        // Page initialization - faqat birinchi marta loading
+        if (!window.pageInitialized) {
+            window.pageInitialized = {};
+        }
+        
+        function initReports() {
+            if (window.pageInitialized.reports) {
+                // Ikkinchi marta kirganda - faqat cache'dan olish
+                if (typeof loadReports === 'function') {
+                    loadReports('month', false);
+                }
+                return;
+            }
+            
+            window.pageInitialized.reports = true;
+            // Birinchi marta - yuklash
+            if (typeof loadReports === 'function') {
+                loadReports('month', false);
+            }
+        }
+    </script>
+</body>
+</html>
+

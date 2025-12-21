@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Balans AI - Biznes</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ============================================
+           GLOBAL STYLES
+           ============================================ */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        input, textarea {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        /* Scroll optimizatsiya */
+        * {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: none;
+        }
+
+        /* Scrollbar yo'q qilish */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* ============================================
+           PAGE TRANSITIONS
+           ============================================ */
+        .page {
+            display: none;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+            min-height: calc(100vh - 80px);
+        }
+
+        .page.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============================================
+           LOADING ANIMATIONS
+           ============================================ */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ============================================
+           NAVIGATION
+           ============================================ */
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+
+        .nav-item.active {
+            color: #2563eb;
+        }
+
+        .nav-item.active svg {
+            transform: scale(1.1);
+        }
+
+        /* ============================================
+           PERIOD BUTTONS
+           ============================================ */
+        .period-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            color: #6b7280;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        
+        .period-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        /* ============================================
+           STATUS FILTER
+           ============================================ */
+        .status-filter {
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: #f3f4f6;
+            color: #6b7280;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        
+        .status-filter.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        /* ============================================
+           TAB BUTTONS
+           ============================================ */
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- ============================================
+         PAGE: HOME (Asosiy sahifa)
+         ============================================ -->
+    <div id="pageHome" class="page active">
+        <div class="min-h-screen pb-20">
+            <!-- Header -->
+            <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-white bg-opacity-20 p-2 rounded-lg">
+                            <i class="fas fa-chart-line text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold">Balans AI - Biznes</h1>
+                            <p class="text-xs text-blue-100" id="lastUpdate">Yuklanmoqda...</p>
+                        </div>
+                    </div>
+                    <button id="refreshBtn" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="p-4">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md p-4 border border-green-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm mb-1">Kirim</p>
+                                <p class="text-2xl font-bold text-green-700" id="totalIncome">
+                                    <span class="skeleton block h-8 w-24 rounded"></span>
+                                </p>
+                            </div>
+                            <div class="bg-green-200 p-3 rounded-full">
+                                <i class="fas fa-arrow-down text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow-md p-4 border border-red-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm mb-1">Chiqim</p>
+                                <p class="text-2xl font-bold text-red-700" id="totalExpense">
+                                    <span class="skeleton block h-8 w-24 rounded"></span>
+                                </p>
+                            </div>
+                            <div class="bg-red-200 p-3 rounded-full">
+                                <i class="fas fa-arrow-up text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Balance Card -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-4 mb-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm mb-1">Jami balans</p>
+                            <p class="text-3xl font-bold" id="totalBalance">
+                                <span class="skeleton block h-10 w-32 rounded bg-blue-500"></span>
+                            </p>
+                        </div>
+                        <i class="fas fa-wallet text-4xl text-blue-200"></i>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-semibold">Tezkor amallar</h2>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="#" data-page="warehouse" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
+                            <div class="bg-gradient-to-br from-blue-100 to-blue-200 p-3 rounded-xl">
+                                <i class="fas fa-boxes text-blue-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800">Ombor</p>
+                                <p class="text-xs text-gray-500">Mahsulotlar</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </a>
+                        <a href="#" data-page="reports" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
+                            <div class="bg-gradient-to-br from-green-100 to-green-200 p-3 rounded-xl">
+                                <i class="fas fa-chart-bar text-green-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800">Hisobotlar</p>
+                                <p class="text-xs text-gray-500">Statistika</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </a>
+                        <a href="#" data-page="employees" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
+                            <div class="bg-gradient-to-br from-purple-100 to-purple-200 p-3 rounded-xl">
+                                <i class="fas fa-users text-purple-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800">Xodimlar</p>
+                                <p class="text-xs text-gray-500">Jamoa</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </a>
+                        <a href="#" data-page="ai-chat" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
+                            <div class="bg-gradient-to-br from-orange-100 to-orange-200 p-3 rounded-xl">
+                                <i class="fas fa-robot text-orange-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800">AI Chat</p>
+                                <p class="text-xs text-gray-500">Yordamchi</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-semibold">So'nggi faoliyat</h2>
+                        <button id="viewAllBtn" class="text-blue-600 text-sm font-medium">Barchasini ko'rish</button>
+                    </div>
+                    <div id="recentActivity" class="bg-white rounded-xl shadow-md p-4 border border-gray-100">
+                        <div class="space-y-3">
+                            <div class="skeleton h-16 rounded-lg"></div>
+                            <div class="skeleton h-16 rounded-lg"></div>
+                            <div class="skeleton h-16 rounded-lg"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <div class="bg-white rounded-xl shadow-md p-3 text-center border border-gray-100">
+                        <i class="fas fa-box text-blue-600 text-2xl mb-2"></i>
+                        <p class="text-xs text-gray-500 mb-1">Mahsulotlar</p>
+                        <p class="text-lg font-bold text-gray-800" id="totalProducts">-</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-3 text-center border border-gray-100">
+                        <i class="fas fa-users text-purple-600 text-2xl mb-2"></i>
+                        <p class="text-xs text-gray-500 mb-1">Xodimlar</p>
+                        <p class="text-lg font-bold text-gray-800" id="totalEmployees">-</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-3 text-center border border-gray-100">
+                        <i class="fas fa-tasks text-orange-600 text-2xl mb-2"></i>
+                        <p class="text-xs text-gray-500 mb-1">Vazifalar</p>
+                        <p class="text-lg font-bold text-gray-800" id="totalTasks">-</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE: WAREHOUSE (Ombor)
+         ============================================ -->
+    <div id="pageWarehouse" class="page">
+        <div class="min-h-screen pb-20">
+            <!-- Header -->
+            <header class="bg-blue-600 text-white p-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="navigateTo('home')" class="text-white">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h1 class="text-xl font-bold">Ombor</h1>
+                    </div>
+                    <button id="addProductBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
+                        <i class="fas fa-plus"></i> Qo'shish
+                    </button>
+                </div>
+            </header>
+
+            <!-- Search and Filter -->
+            <div class="p-4 bg-white border-b">
+                <div class="flex space-x-2">
+                    <input type="text" id="searchInput" placeholder="Qidirish..." 
+                           class="flex-1 border border-gray-300 rounded-lg px-4 py-2">
+                    <button id="filterBtn" class="bg-gray-100 px-4 py-2 rounded-lg">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Products List -->
+            <main class="p-4">
+                <!-- Loading State -->
+                <div id="loadingState" class="space-y-3">
+                    <div class="skeleton h-24 rounded-xl"></div>
+                    <div class="skeleton h-24 rounded-xl"></div>
+                    <div class="skeleton h-24 rounded-xl"></div>
+                </div>
+                <div id="productsList" class="space-y-3 hidden">
+                    <!-- Products will be loaded here -->
+                </div>
+            </main>
+
+            <!-- Add/Edit Product Modal -->
+            <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold" id="modalTitle">Yangi mahsulot</h2>
+                        <button id="closeModal" class="text-gray-500">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Nomi *</label>
+                                <input type="text" id="productName" required
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Kategoriya</label>
+                                <input type="text" id="productCategory"
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Narxi</label>
+                                    <input type="number" id="productPrice" step="0.01"
+                                           class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Miqdori</label>
+                                    <input type="number" id="productQuantity"
+                                           class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Min. miqdor</label>
+                                    <input type="number" id="productMinQuantity"
+                                           class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Birlik</label>
+                                    <select id="productUnit" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                        <option value="dona">dona</option>
+                                        <option value="kg">kg</option>
+                                        <option value="litr">litr</option>
+                                        <option value="qop">qop</option>
+                                        <option value="m">m</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Barcode</label>
+                                <input type="text" id="productBarcode"
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Rasm URL</label>
+                                <input type="url" id="productImageUrl"
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                        </div>
+                        <div class="flex space-x-3 mt-6">
+                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                                Saqlash
+                            </button>
+                            <button type="button" id="cancelBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                                Bekor qilish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Movement Modal -->
+            <div id="movementModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg w-full max-w-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold" id="movementTitle">Ombor harakati</h2>
+                        <button id="closeMovementModal" class="text-gray-500">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <form id="movementForm">
+                        <input type="hidden" id="movementProductId">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Harakat turi *</label>
+                                <select id="movementType" required class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <option value="in">Kirim</option>
+                                    <option value="out">Chiqim</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Miqdori *</label>
+                                <input type="number" id="movementQuantity" required
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Narxi</label>
+                                <input type="number" id="movementPrice" step="0.01"
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Sabab</label>
+                                <select id="movementReason" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <option value="purchase">Xarid</option>
+                                    <option value="sale">Sotuv</option>
+                                    <option value="loss">Yo'qotish</option>
+                                    <option value="defect">Nuqson</option>
+                                    <option value="other">Boshqa</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex space-x-3 mt-6">
+                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                                Saqlash
+                            </button>
+                            <button type="button" id="cancelMovementBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                                Bekor qilish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE: REPORTS (Hisobotlar)
+         ============================================ -->
+    <div id="pageReports" class="page">
+        <div class="min-h-screen pb-20">
+            <!-- Header -->
+            <header class="bg-blue-600 text-white p-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="navigateTo('home')" class="text-white">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h1 class="text-xl font-bold">Hisobotlar</h1>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Period Selector -->
+            <div class="p-4 bg-white border-b">
+                <div class="flex space-x-2 overflow-x-auto">
+                    <button class="period-btn active" data-period="day">Kun</button>
+                    <button class="period-btn" data-period="week">Hafta</button>
+                    <button class="period-btn" data-period="month">Oy</button>
+                    <button class="period-btn" data-period="year">Yil</button>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="p-4">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <p class="text-gray-500 text-sm mb-1">Jami kirim</p>
+                        <p class="text-2xl font-bold text-green-600" id="totalIncome">0 UZS</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <p class="text-gray-500 text-sm mb-1">Jami chiqim</p>
+                        <p class="text-2xl font-bold text-red-600" id="totalExpense">0 UZS</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 mb-4">
+                    <p class="text-gray-500 text-sm mb-1">Foyda</p>
+                    <p class="text-2xl font-bold" id="profit">0 UZS</p>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="p-4">
+                <div class="bg-white rounded-lg shadow p-4 mb-4">
+                    <h3 class="font-semibold mb-3">Chiqimlar bo'yicha kategoriyalar</h3>
+                    <canvas id="categoriesChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Warehouse Stats -->
+            <div class="p-4">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold mb-3">Ombor statistikasi</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Jami mahsulotlar:</span>
+                            <span class="font-semibold" id="totalProducts">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Ombor qiymati:</span>
+                            <span class="font-semibold" id="warehouseValue">0 UZS</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Kam qolganlar:</span>
+                            <span class="font-semibold text-red-600" id="lowStock">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE: EMPLOYEES (Xodimlar)
+         ============================================ -->
+    <div id="pageEmployees" class="page">
+        <div class="min-h-screen pb-20">
+            <!-- Header -->
+            <header class="bg-blue-600 text-white p-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="navigateTo('home')" class="text-white">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h1 class="text-xl font-bold">Xodimlar</h1>
+                    </div>
+                    <button id="addEmployeeBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
+                        <i class="fas fa-plus"></i> Qo'shish
+                    </button>
+                </div>
+            </header>
+
+            <!-- Tabs -->
+            <div class="bg-white border-b">
+                <div class="flex">
+                    <button class="tab-btn active flex-1 py-3 border-b-2 border-blue-600 text-blue-600 font-semibold" data-tab="employees">
+                        Xodimlar
+                    </button>
+                    <button class="tab-btn flex-1 py-3 border-b-2 border-transparent text-gray-500" data-tab="tasks">
+                        Vazifalar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Employees Tab -->
+            <div id="employeesTab" class="tab-content">
+                <div class="p-4">
+                    <div id="employeesList" class="space-y-3">
+                        <p class="text-gray-500 text-center py-8">Xodimlar yuklanmoqda...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tasksTab" class="tab-content hidden">
+                <div class="p-4">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div class="flex space-x-2 overflow-x-auto">
+                            <button class="status-filter active" data-status="">Barchasi</button>
+                            <button class="status-filter" data-status="pending">Kutilmoqda</button>
+                            <button class="status-filter" data-status="in_progress">Jarayonda</button>
+                            <button class="status-filter" data-status="completed">Bajarilgan</button>
+                        </div>
+                        <button id="addTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold ml-2">
+                            <i class="fas fa-plus"></i> Vazifa
+                        </button>
+                    </div>
+                    <div id="tasksList" class="space-y-3">
+                        <p class="text-gray-500 text-center py-8">Vazifalar yuklanmoqda...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add/Edit Employee Modal -->
+            <div id="employeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg w-full max-w-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold" id="employeeModalTitle">Yangi xodim</h2>
+                        <button id="closeEmployeeModal" class="text-gray-500">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <form id="employeeForm">
+                        <input type="hidden" id="employeeId">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Ism *</label>
+                                <input type="text" id="employeeName" required
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Telegram ID *</label>
+                                <input type="number" id="employeeTelegramId" required
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Rol</label>
+                                <select id="employeeRole" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <option value="employee">Xodim</option>
+                                    <option value="manager">Menejer</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="employeeIsActive" checked class="rounded">
+                                    <span>Faol</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex space-x-3 mt-6">
+                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                                Saqlash
+                            </button>
+                            <button type="button" id="cancelEmployeeBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                                Bekor qilish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Add/Edit Task Modal -->
+            <div id="taskModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold" id="taskModalTitle">Yangi vazifa</h2>
+                        <button id="closeTaskModal" class="text-gray-500">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <form id="taskForm">
+                        <input type="hidden" id="taskId">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Sarlavha *</label>
+                                <input type="text" id="taskTitle" required
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Tavsif</label>
+                                <textarea id="taskDescription" rows="3"
+                                          class="w-full border border-gray-300 rounded-lg px-4 py-2"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Xodim</label>
+                                <select id="taskEmployeeId" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <option value="">Xodim tanlash</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Muddat</label>
+                                <input type="datetime-local" id="taskDueDate"
+                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Holat</label>
+                                <select id="taskStatus" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <option value="pending">Kutilmoqda</option>
+                                    <option value="in_progress">Jarayonda</option>
+                                    <option value="completed">Bajarilgan</option>
+                                    <option value="cancelled">Bekor qilingan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex space-x-3 mt-6">
+                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                                Saqlash
+                            </button>
+                            <button type="button" id="cancelTaskBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                                Bekor qilish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE: AI CHAT
+         ============================================ -->
+    <div id="pageAiChat" class="page">
+        <div class="min-h-screen pb-20 flex flex-col">
+            <!-- Header -->
+            <header class="bg-blue-600 text-white p-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="navigateTo('home')" class="text-white">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h1 class="text-xl font-bold">AI Yordamchi</h1>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="flex items-start space-x-2">
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-robot text-blue-600"></i>
+                    </div>
+                    <div class="flex-1 bg-white rounded-lg p-3 shadow">
+                        <p class="text-sm">Salom! Men sizning biznesingizga yordam berishga tayyorman. Savolingizni yozing.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="flex space-x-2">
+                    <input type="text" id="messageInput" placeholder="Xabar yozing..." 
+                           class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="sendBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         BOTTOM NAVIGATION
+         ============================================ -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+        <div class="flex justify-around py-2">
+            <a href="#" data-page="home" class="nav-item flex flex-col items-center p-2 text-blue-600 active">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs mt-1">Bosh sahifa</span>
+            </a>
+            <a href="#" data-page="warehouse" class="nav-item flex flex-col items-center p-2 text-gray-400">
+                <i class="fas fa-boxes text-xl"></i>
+                <span class="text-xs mt-1">Ombor</span>
+            </a>
+            <a href="#" data-page="reports" class="nav-item flex flex-col items-center p-2 text-gray-400">
+                <i class="fas fa-chart-bar text-xl"></i>
+                <span class="text-xs mt-1">Hisobotlar</span>
+            </a>
+            <a href="#" data-page="employees" class="nav-item flex flex-col items-center p-2 text-gray-400">
+                <i class="fas fa-users text-xl"></i>
+                <span class="text-xs mt-1">Xodimlar</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- ============================================
+         SCRIPTS
+         ============================================ -->
+    <script src="/static/js/cache.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/warehouse.js"></script>
+    <script src="/static/js/reports.js"></script>
+    <script src="/static/js/employees.js"></script>
+    <script src="/static/js/ai_chat.js"></script>
+    
+    <!-- ============================================
+         SPA NAVIGATION SYSTEM
+         ============================================ -->
+    <script>
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let currentPage = 'home';
+        let loadedPages = new Set(['home']); // Pre-loaded pages
+        if (!window.pageInitialized) {
+            window.pageInitialized = {};
+        }
+
+        // ============================================
+        // HAPTIC FEEDBACK
+        // ============================================
+        function hapticFeedback(type = 'light') {
+            if (window.tg && window.tg.HapticFeedback) {
+                try {
+                    switch(type) {
+                        case 'light':
+                            window.tg.HapticFeedback.impactOccurred('light');
+                            break;
+                        case 'medium':
+                            window.tg.HapticFeedback.impactOccurred('medium');
+                            break;
+                        case 'heavy':
+                            window.tg.HapticFeedback.impactOccurred('heavy');
+                            break;
+                        case 'success':
+                            window.tg.HapticFeedback.notificationOccurred('success');
+                            break;
+                        case 'error':
+                            window.tg.HapticFeedback.notificationOccurred('error');
+                            break;
+                        case 'warning':
+                            window.tg.HapticFeedback.notificationOccurred('warning');
+                            break;
+                    }
+                } catch (e) {
+                    console.log('Haptic feedback not available:', e);
+                }
+            }
+        }
+
+        // ============================================
+        // NAVIGATION FUNCTION
+        // ============================================
+        function navigateTo(pageName) {
+            // 1. Optimizatsiya: agar bir xil sahifaga o'tilmoqchi bo'lsa
+            if (currentPage === pageName) return;
+            
+            // 2. Haptic feedback
+            hapticFeedback('light');
+            
+            // 3. Hide current page
+            const oldPage = document.getElementById(`page${capitalize(pageName)}`);
+            const oldNavItem = document.querySelector(`.nav-item[data-page="${currentPage}"]`);
+            const oldNavLink = document.querySelector(`.nav-link[data-page="${currentPage}"]`);
+            
+            if (oldPage) {
+                const currentPageEl = document.getElementById(`page${capitalize(currentPage)}`);
+                if (currentPageEl) {
+                    currentPageEl.classList.remove('active');
+                }
+            }
+            if (oldNavItem) oldNavItem.classList.remove('active');
+            if (oldNavLink) oldNavLink.classList.remove('active');
+            
+            // 4. Show new page
+            const newPage = document.getElementById(`page${capitalize(pageName)}`);
+            const newNavItem = document.querySelector(`.nav-item[data-page="${pageName}"]`);
+            const newNavLink = document.querySelector(`.nav-link[data-page="${pageName}"]`);
+            
+            if (newPage) {
+                newPage.classList.add('active');
+            }
+            if (newNavItem) newNavItem.classList.add('active');
+            if (newNavLink) newNavLink.classList.add('active');
+            
+            // 5. Update state
+            currentPage = pageName;
+            
+            // 6. Lazy load (if needed)
+            if (!loadedPages.has(pageName)) {
+                loadedPages.add(pageName);
+                loadPageData(pageName);
+            }
+            
+            // Initialize page
+            initPage(pageName);
+        }
+
+        // ============================================
+        // CAPITALIZE FUNCTION
+        // ============================================
+        function capitalize(str) {
+            // "ai-chat" -> "AiChat", "home" -> "Home"
+            return str.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+        }
+
+        // ============================================
+        // LOAD PAGE DATA
+        // ============================================
+        async function loadPageData(pageName) {
+            try {
+                switch(pageName) {
+                    case 'home':
+                        if (typeof loadDashboard === 'function') {
+                            const cached = dataCache?.get('/api/reports/summary?period=month');
+                            loadDashboard(!cached, false);
+                        }
+                        break;
+                    case 'warehouse':
+                        if (typeof loadProducts === 'function') {
+                            const cached = dataCache?.get('/api/warehouse/products');
+                            loadProducts(!cached, false);
+                        }
+                        break;
+                    case 'reports':
+                        if (typeof loadReports === 'function') {
+                            loadReports('month', false);
+                        }
+                        break;
+                    case 'employees':
+                        if (typeof loadEmployees === 'function') {
+                            loadEmployees(false);
+                        }
+                        if (typeof loadTasks === 'function') {
+                            loadTasks('', false);
+                        }
+                        break;
+                    case 'ai-chat':
+                        // AI Chat doesn't need data loading
+                        break;
+                }
+            } catch (error) {
+                console.error(`Error loading ${pageName}:`, error);
+            }
+        }
+
+        // ============================================
+        // INIT PAGE
+        // ============================================
+        function initPage(pageName) {
+            const initFuncName = `init${capitalize(pageName)}`;
+            if (window[initFuncName] && typeof window[initFuncName] === 'function') {
+                window[initFuncName]();
+            }
+        }
+
+        // ============================================
+        // PAGE INIT FUNCTIONS
+        // ============================================
+        function initHome() {
+            if (window.pageInitialized.home) {
+                if (typeof loadDashboard === 'function') {
+                    loadDashboard(false, false);
+                }
+                return;
+            }
+            window.pageInitialized.home = true;
+            if (typeof loadDashboard === 'function') {
+                loadDashboard(true, false);
+            }
+        }
+
+        function initWarehouse() {
+            if (window.pageInitialized.warehouse) {
+                if (typeof loadProducts === 'function') {
+                    loadProducts(false, false);
+                }
+                return;
+            }
+            window.pageInitialized.warehouse = true;
+            if (typeof loadProducts === 'function') {
+                const cached = dataCache?.get('/api/warehouse/products');
+                loadProducts(!cached, false);
+            }
+        }
+
+        function initReports() {
+            if (window.pageInitialized.reports) {
+                if (typeof loadReports === 'function') {
+                    loadReports('month', false);
+                }
+                return;
+            }
+            window.pageInitialized.reports = true;
+            if (typeof loadReports === 'function') {
+                loadReports('month', false);
+            }
+        }
+
+        function initEmployees() {
+            if (window.pageInitialized.employees) {
+                if (typeof loadEmployees === 'function') {
+                    loadEmployees(false);
+                }
+                if (typeof loadTasks === 'function') {
+                    loadTasks('', false);
+                }
+                return;
+            }
+            window.pageInitialized.employees = true;
+            if (typeof loadEmployees === 'function') {
+                loadEmployees(false);
+            }
+            if (typeof loadTasks === 'function') {
+                loadTasks('', false);
+            }
+        }
+
+        function initAiChat() {
+            // AI Chat doesn't need initialization
+            console.log('AI Chat sahifasi yuklandi');
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Telegram WebApp setup
+            if (window.tg) {
+                window.tg.ready();
+                window.tg.expand();
+                window.tg.setHeaderColor('#2563eb');
+                window.tg.setBackgroundColor('#f5f5f5');
+            }
+
+            // Navigation links
+            document.querySelectorAll('.nav-item, .nav-link').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = item.getAttribute('data-page');
+                    if (page) {
+                        navigateTo(page);
+                    }
+                });
+            });
+
+            // Pre-load asosiy sahifalar
+            await Promise.all([
+                loadPageData('home'),
+                loadPageData('warehouse') // Pre-load warehouse
+            ]);
+
+            // Initialize home page
+            initPage('home');
+        });
+    </script>
+</body>
+</html>

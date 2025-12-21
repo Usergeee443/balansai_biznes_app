@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xodimlar - Balans AI</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen pb-20">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="/" class="text-white">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </a>
+                    <h1 class="text-xl font-bold">Xodimlar</h1>
+                </div>
+                <button id="addEmployeeBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
+                    <i class="fas fa-plus"></i> Qo'shish
+                </button>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="bg-white border-b">
+            <div class="flex">
+                <button class="tab-btn active flex-1 py-3 border-b-2 border-blue-600 text-blue-600 font-semibold" data-tab="employees">
+                    Xodimlar
+                </button>
+                <button class="tab-btn flex-1 py-3 border-b-2 border-transparent text-gray-500" data-tab="tasks">
+                    Vazifalar
+                </button>
+            </div>
+        </div>
+
+        <!-- Employees Tab -->
+        <div id="employeesTab" class="tab-content">
+            <div class="p-4">
+                <div id="employeesList" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">Xodimlar yuklanmoqda...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasksTab" class="tab-content hidden">
+            <div class="p-4">
+                <div class="mb-4 flex items-center justify-between">
+                    <div class="flex space-x-2 overflow-x-auto">
+                        <button class="status-filter active" data-status="">Barchasi</button>
+                        <button class="status-filter" data-status="pending">Kutilmoqda</button>
+                        <button class="status-filter" data-status="in_progress">Jarayonda</button>
+                        <button class="status-filter" data-status="completed">Bajarilgan</button>
+                    </div>
+                    <button id="addTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold ml-2">
+                        <i class="fas fa-plus"></i> Vazifa
+                    </button>
+                </div>
+                <div id="tasksList" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">Vazifalar yuklanmoqda...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Employee Modal -->
+        <div id="employeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg w-full max-w-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold" id="employeeModalTitle">Yangi xodim</h2>
+                    <button id="closeEmployeeModal" class="text-gray-500">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="employeeForm">
+                    <input type="hidden" id="employeeId">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Ism *</label>
+                            <input type="text" id="employeeName" required
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Telegram ID *</label>
+                            <input type="number" id="employeeTelegramId" required
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Rol</label>
+                            <select id="employeeRole" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <option value="employee">Xodim</option>
+                                <option value="manager">Menejer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="employeeIsActive" checked class="rounded">
+                                <span>Faol</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                            Saqlash
+                        </button>
+                        <button type="button" id="cancelEmployeeBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                            Bekor qilish
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add/Edit Task Modal -->
+        <div id="taskModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold" id="taskModalTitle">Yangi vazifa</h2>
+                    <button id="closeTaskModal" class="text-gray-500">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Sarlavha *</label>
+                            <input type="text" id="taskTitle" required
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Tavsif</label>
+                            <textarea id="taskDescription" rows="3"
+                                      class="w-full border border-gray-300 rounded-lg px-4 py-2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Xodim</label>
+                            <select id="taskEmployeeId" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <option value="">Xodim tanlash</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Muddat</label>
+                            <input type="datetime-local" id="taskDueDate"
+                                   class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Holat</label>
+                            <select id="taskStatus" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <option value="pending">Kutilmoqda</option>
+                                <option value="in_progress">Jarayonda</option>
+                                <option value="completed">Bajarilgan</option>
+                                <option value="cancelled">Bekor qilingan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                            Saqlash
+                        </button>
+                        <button type="button" id="cancelTaskBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                            Bekor qilish
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .status-filter {
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: #f3f4f6;
+            color: #6b7280;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .status-filter.active {
+            background: #2563eb;
+            color: white;
+        }
+    </style>
+
+    <script src="/static/js/cache.js"></script>
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/employees.js"></script>
+    <script>
+        // Page initialization - faqat birinchi marta loading
+        if (!window.pageInitialized) {
+            window.pageInitialized = {};
+        }
+        
+        function initEmployees() {
+            if (window.pageInitialized.employees) {
+                // Ikkinchi marta kirganda - faqat cache'dan olish
+                if (typeof loadEmployees === 'function') {
+                    loadEmployees(false);
+                }
+                if (typeof loadTasks === 'function') {
+                    loadTasks('', false);
+                }
+                return;
+            }
+            
+            window.pageInitialized.employees = true;
+            // Birinchi marta - yuklash
+            if (typeof loadEmployees === 'function') {
+                loadEmployees(false);
+            }
+            if (typeof loadTasks === 'function') {
+                loadTasks('', false);
+            }
+        }
+    </script>
+</body>
+</html>
+

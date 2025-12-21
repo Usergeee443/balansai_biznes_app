@@ -6,7 +6,10 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
+env.bak/
+venv.bak/
 build/
 develop-eggs/
 dist/
@@ -19,13 +22,22 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Environment variables
 .env
+.env.*
+!.env.example
+env.example
+*.env
 .env.local
+.env.development
+.env.production
 
 # IDE
 .vscode/
@@ -33,15 +45,48 @@ wheels/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
 # Logs
 *.log
+logs/
+*.log.*
 
 # Database
 *.db
 *.sqlite
+*.sqlite3
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Coverage
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 

@@ -89,20 +89,29 @@ async function loadReports(period = 'month', forceRefresh = false) {
         
         // Update summary
         if (summary) {
-            document.getElementById('totalIncome').textContent = formatCurrency(summary.total_income || 0);
-            document.getElementById('totalExpense').textContent = formatCurrency(summary.total_expense || 0);
-            
+            const incomeEl = document.getElementById('reportTotalIncome') || document.getElementById('totalIncome');
+            const expenseEl = document.getElementById('reportTotalExpense') || document.getElementById('totalExpense');
+
+            if (incomeEl) incomeEl.textContent = formatCurrency(summary.total_income || 0);
+            if (expenseEl) expenseEl.textContent = formatCurrency(summary.total_expense || 0);
+
             const profit = (summary.total_income || 0) - (summary.total_expense || 0);
             const profitEl = document.getElementById('profit');
-            profitEl.textContent = formatCurrency(profit);
-            profitEl.className = profit >= 0 ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
+            if (profitEl) {
+                profitEl.textContent = formatCurrency(profit);
+                profitEl.className = profit >= 0 ? 'text-2xl font-bold text-tg-green' : 'text-2xl font-bold text-tg-red';
+            }
         }
-        
+
         // Update warehouse stats
         if (warehouse_stats) {
-            document.getElementById('totalProducts').textContent = warehouse_stats.total_products || 0;
-            document.getElementById('warehouseValue').textContent = formatCurrency(warehouse_stats.total_value || 0);
-            document.getElementById('lowStock').textContent = warehouse_stats.low_stock_count || 0;
+            const productsEl = document.getElementById('reportTotalProducts') || document.getElementById('totalProducts');
+            const valueEl = document.getElementById('warehouseValue');
+            const lowStockEl = document.getElementById('lowStock');
+
+            if (productsEl) productsEl.textContent = warehouse_stats.total_products || 0;
+            if (valueEl) valueEl.textContent = formatCurrency(warehouse_stats.total_value || 0);
+            if (lowStockEl) lowStockEl.textContent = warehouse_stats.low_stock_count || 0;
         }
         
         // Update chart

@@ -464,11 +464,11 @@ def update_task(task_id):
     """Vazifani yangilash"""
     user_id = session.get('user_id')
     data = request.json
-    
+
     try:
         completed_at = "NOW()" if data.get('status') == 'completed' else "NULL"
         execute_query(
-            f"""UPDATE business_tasks 
+            f"""UPDATE business_tasks
                SET title = %s, description = %s, due_date = %s, status = %s,
                    employee_id = %s, completed_at = {completed_at}
                WHERE id = %s AND owner_id = %s""",
@@ -479,24 +479,131 @@ def update_task(task_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    """Vazifani o'chirish"""
+    user_id = session.get('user_id')
+
+    try:
+        execute_query(
+            "DELETE FROM business_tasks WHERE id = %s AND owner_id = %s",
+            (task_id, user_id)
+        )
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ===== AI CHAT API =====
 
 @app.route('/api/ai/chat', methods=['POST'])
 def ai_chat_api():
-    """AI chat endpoint (keyinchalik AI integratsiya qilinadi)"""
+    """AI chat endpoint - Biznes ma'lumotlarini tahlil qiladi"""
     user_id = session.get('user_id')
     data = request.json
-    message = data.get('message', '')
-    
-    # Hozircha oddiy response (keyinchalik AI API bilan integratsiya qilinadi)
-    response = f"Sizning xabaringiz: {message}. AI chat funksiyasi keyinchalik qo'shiladi."
-    
-    return jsonify({
-        'success': True,
-        'data': {
-            'response': response
-        }
-    })
+    message = data.get('message', '').lower()
+
+    try:
+        # Simple AI responses based on keywords
+        response = generate_ai_response(user_id, message)
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'response': response
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': True,
+            'data': {
+                'response': f"Kechirasiz, sizning so'rovingizni tushunmadim. Iltimos, boshqa tarzda so'rang."
+            }
+        })
+
+def generate_ai_response(user_id, message):
+    """Generate intelligent responses based on business data"""
+    connection = get_db_connection()
+
+    try:
+        # Keyword-based responses
+        if any(word in message for word in ['salom', 'assalom', 'hello', 'hi']):
+            return "Assalomu alaykum! Men sizning biznes yordamchingizman. Qanday yordam bera olaman?"
+
+        elif any(word in message for word in ['balans', 'hisob', 'pul', 'daromad']):
+            with connection.cursor() as cursor:
+                # Get financial summary
+                cursor.execute(
+                    """SELECT
+                        SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) as income,
+                        SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as expense
+                       FROM transactions
+                       WHERE user_id = %s AND YEAR(created_at) = YEAR(NOW()) AND MONTH(created_at) = MONTH(NOW())""",
+                    (user_id,)
+                )
+                result = cursor.fetchone()
+                if result:
+                    income = result.get('income', 0) or 0
+                    expense = result.get('expense', 0) or 0
+                    balance = income - expense
+                    return f"Joriy oy uchun:\n💰 Kirim: {income:,.0f} UZS\n💸 Chiqim: {expense:,.0f} UZS\n📊 Balans: {balance:,.0f} UZS\n\n{'✅ Yaxshi natija!' if balance > 0 else '⚠️ Chiqimlarni kamaytiring.'}"
+
+        elif any(word in message for word in ['ombor', 'mahsulot', 'product']):
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """SELECT COUNT(*) as total,
+                       SUM(CASE WHEN quantity <= min_quantity THEN 1 ELSE 0 END) as low_stock
+                       FROM warehouse_products WHERE user_id = %s""",
+                    (user_id,)
+                )
+                result = cursor.fetchone()
+                if result:
+                    total = result.get('total', 0)
+                    low_stock = result.get('low_stock', 0)
+                    return f"📦 Omboringizda {total} ta mahsulot bor.\n{'⚠️ ' + str(low_stock) + ' ta mahsulot tugab qolmoqda!' if low_stock > 0 else '✅ Barcha mahsulotlar yetarli miqdorda.'}"
+
+        elif any(word in message for word in ['xodim', 'employee', 'jamoa', 'team']):
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) as total FROM business_employees WHERE owner_id = %s AND is_active = TRUE",
+                    (user_id,)
+                )
+                result = cursor.fetchone()
+                if result:
+                    total = result.get('total', 0)
+                    return f"👥 Sizda {total} ta faol xodim bor. Jamoa boshqaruvi uchun 'Xodimlar' bo'limiga o'ting."
+
+        elif any(word in message for word in ['vazifa', 'task', 'ish']):
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """SELECT COUNT(*) as total,
+                       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                       SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress
+                       FROM business_tasks WHERE owner_id = %s""",
+                    (user_id,)
+                )
+                result = cursor.fetchone()
+                if result:
+                    total = result.get('total', 0)
+                    pending = result.get('pending', 0) or 0
+                    in_progress = result.get('in_progress', 0) or 0
+                    return f"📋 Jami vazifalar: {total}\n⏳ Kutilmoqda: {pending}\n🔄 Jarayonda: {in_progress}"
+
+        elif any(word in message for word in ['hisobot', 'report', 'statistika']):
+            return "📊 Hisobotlar bo'limida siz quyidagilarni ko'rishingiz mumkin:\n• Moliyaviy hisobotlar\n• Ombor statistikasi\n• Xodimlar faoliyati\n• Vazifalar holati\n\nHisobotlar sahifasiga o'ting!"
+
+        elif any(word in message for word in ['yordam', 'help', 'qanday']):
+            return "Men sizga quyidagi mavzularda yordam bera olaman:\n\n💰 Balans va moliya\n📦 Ombor boshqaruvi\n👥 Xodimlar va vazifalar\n📊 Hisobotlar\n\nSo'rovingizni yozing va men sizga javob beraman!"
+
+        elif any(word in message for word in ['rahmat', 'thank', 'minnatdor']):
+            return "Arzimaydi! Yana qanday yordam bera olaman? 😊"
+
+        else:
+            return ("Men sizning biznes yordamchingizman. Quyidagilar haqida so'rashingiz mumkin:\n\n"
+                   "💰 Balans va moliya\n📦 Ombor mahsulotlari\n👥 Xodimlar\n📋 Vazifalar\n📊 Hisobotlar\n\n"
+                   "Masalan: 'Balansim qancha?' yoki 'Omborda nechta mahsulot bor?'")
+
+    finally:
+        connection.close()
 
 if __name__ == '__main__':
     # Production'da gunicorn ishlatiladi, bu faqat development uchun

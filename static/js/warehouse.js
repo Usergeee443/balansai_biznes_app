@@ -78,12 +78,16 @@ function formatCurrency(amount) {
     }).format(amount || 0);
 }
 
+// Store all products globally for search
+let allProducts = [];
+
 // Load products
 async function loadProducts(showLoading = true, forceRefresh = false) {
     // Cache'dan tekshirish - agar cache'da bo'lsa va loading ko'rsatmaslik kerak bo'lsa
     if (!forceRefresh) {
         const cached = dataCache.get('/api/warehouse/products');
         if (cached && cached.success) {
+            allProducts = cached.data;
             displayProducts(cached.data);
             const loadingState = document.getElementById('loadingState');
             const productsList = document.getElementById('productsList');
@@ -103,6 +107,7 @@ async function loadProducts(showLoading = true, forceRefresh = false) {
 
     const res = await apiRequest('/api/warehouse/products', {}, true);
     if (res.success) {
+        allProducts = res.data;
         displayProducts(res.data);
         const loadingState = document.getElementById('loadingState');
         const productsList = document.getElementById('productsList');
@@ -111,10 +116,29 @@ async function loadProducts(showLoading = true, forceRefresh = false) {
     } else {
         const loadingState = document.getElementById('loadingState');
         if (loadingState) {
-            loadingState.innerHTML = 
+            loadingState.innerHTML =
                 '<div class="text-center py-8"><i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i><p class="text-red-500">Xatolik: ' + res.error + '</p></div>';
         }
     }
+}
+
+// Search products
+function searchProducts(query) {
+    if (!query || query.trim() === '') {
+        displayProducts(allProducts);
+        return;
+    }
+
+    const searchTerm = query.toLowerCase().trim();
+    const filtered = allProducts.filter(product => {
+        return (
+            (product.name && product.name.toLowerCase().includes(searchTerm)) ||
+            (product.category && product.category.toLowerCase().includes(searchTerm)) ||
+            (product.barcode && product.barcode.toLowerCase().includes(searchTerm))
+        );
+    });
+
+    displayProducts(filtered);
 }
 
 // Display products
@@ -318,9 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Search
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        // Search functionality can be added here
-    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchProducts(e.target.value);
+        });
+    }
 });
 
 // Make functions global

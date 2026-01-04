@@ -8,19 +8,57 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tg: {
+                            bg: '#1C1C1E',
+                            secondary: '#2C2C2E',
+                            tertiary: '#3A3A3C',
+                            card: '#2C2C2E',
+                            border: '#3A3A3C',
+                            blue: '#007AFF',
+                            green: '#30D158',
+                            red: '#FF453A',
+                            orange: '#FF9F0A',
+                            purple: '#BF5AF2',
+                            yellow: '#FFD60A',
+                            text: '#FFFFFF',
+                            hint: '#8E8E93',
+                            link: '#007AFF',
+                        }
+                    },
+                    fontFamily: {
+                        'tg': ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         /* ============================================
-           GLOBAL STYLES
+           TELEGRAM MINI APP GLOBAL STYLES
            ============================================ */
         * {
             -webkit-tap-highlight-color: transparent;
             -webkit-user-select: none;
             user-select: none;
+            box-sizing: border-box;
         }
-        
-        input, textarea {
+
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1C1C1E;
+            color: #FFFFFF;
+            overflow-x: hidden;
+        }
+
+        input, textarea, select {
             -webkit-user-select: text;
             user-select: text;
+            font-family: inherit;
         }
 
         /* Scroll optimizatsiya */
@@ -29,19 +67,29 @@
             overscroll-behavior: none;
         }
 
-        /* Scrollbar yo'q qilish */
+        /* Telegram-style scrollbar */
         ::-webkit-scrollbar {
-            display: none;
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3A3A3C;
+            border-radius: 2px;
         }
 
         /* ============================================
-           PAGE TRANSITIONS
+           PAGE TRANSITIONS (Telegram-style)
            ============================================ */
         .page {
             display: none;
             opacity: 0;
             transform: translateX(20px);
-            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             min-height: calc(100vh - 80px);
         }
 
@@ -49,18 +97,41 @@
             display: block;
             opacity: 1;
             transform: translateX(0);
-            animation: fadeIn 0.2s ease-in-out;
+            animation: tgSlideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        @keyframes fadeIn {
+        @keyframes tgSlideIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(20px) scale(0.98);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
+        }
+
+        /* ============================================
+           TELEGRAM CARD ANIMATIONS
+           ============================================ */
+        .tg-card {
+            background: #2C2C2E;
+            border-radius: 16px;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .tg-card:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .tg-btn {
+            transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .tg-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
         }
 
         /* ============================================
@@ -69,332 +140,612 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
         .loading-spinner {
             animation: spin 1s linear infinite;
         }
-        
+
         .loading-pulse {
             animation: pulse 1.5s ease-in-out infinite;
         }
-        
+
         .skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background: linear-gradient(90deg, #2C2C2E 25%, #3A3A3C 50%, #2C2C2E 75%);
             background-size: 200% 100%;
-            animation: loading 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            animation: shimmer 1.5s ease-in-out infinite;
+            border-radius: 12px;
         }
 
         /* ============================================
-           NAVIGATION
+           NAVIGATION (Telegram-style)
            ============================================ */
         .nav-item {
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            color: #8E8E93;
         }
 
         .nav-item.active {
-            color: #2563eb;
+            color: #007AFF;
         }
 
-        .nav-item.active svg {
+        .nav-item.active i {
             transform: scale(1.1);
         }
 
+        .nav-item:active {
+            transform: scale(0.9);
+        }
+
         /* ============================================
-           PERIOD BUTTONS
+           TELEGRAM PERIOD BUTTONS
            ============================================ */
         .period-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            background: #f3f4f6;
-            color: #6b7280;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-        }
-        
-        .period-btn.active {
-            background: #2563eb;
-            color: white;
-        }
-
-        /* ============================================
-           STATUS FILTER
-           ============================================ */
-        .status-filter {
-            padding: 6px 12px;
-            border-radius: 6px;
-            background: #f3f4f6;
-            color: #6b7280;
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: #2C2C2E;
+            color: #8E8E93;
+            font-weight: 600;
             font-size: 14px;
             white-space: nowrap;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: none;
         }
-        
-        .status-filter.active {
-            background: #2563eb;
+
+        .period-btn.active {
+            background: #007AFF;
             color: white;
         }
 
+        .period-btn:active {
+            transform: scale(0.95);
+        }
+
         /* ============================================
-           TAB BUTTONS
+           TELEGRAM STATUS FILTER
+           ============================================ */
+        .status-filter {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #2C2C2E;
+            color: #8E8E93;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: none;
+        }
+
+        .status-filter.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        .status-filter:active {
+            transform: scale(0.95);
+        }
+
+        /* ============================================
+           TELEGRAM TAB BUTTONS
            ============================================ */
         .tab-btn {
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            color: #8E8E93;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: #007AFF;
+            border-bottom-color: #007AFF;
+        }
+
+        /* ============================================
+           TELEGRAM INPUTS
+           ============================================ */
+        .tg-input {
+            background: #3A3A3C;
+            border: none;
+            border-radius: 12px;
+            color: #FFFFFF;
+            padding: 14px 16px;
+            font-size: 16px;
             transition: all 0.2s ease;
+        }
+
+        .tg-input::placeholder {
+            color: #8E8E93;
+        }
+
+        .tg-input:focus {
+            outline: none;
+            background: #48484A;
+        }
+
+        /* ============================================
+           TELEGRAM MODAL
+           ============================================ */
+        .tg-modal {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .tg-modal-content {
+            background: #2C2C2E;
+            border-radius: 20px;
+            animation: tgModalIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes tgModalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* ============================================
+           TELEGRAM PROGRESS CIRCLE
+           ============================================ */
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* ============================================
+           ACTION BUTTONS (Like Telegram Wallet)
+           ============================================ */
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .action-btn:active {
+            transform: scale(0.9);
+            opacity: 0.8;
+        }
+
+        .action-btn .icon-wrapper {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #2C2C2E;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:active .icon-wrapper {
+            background: #3A3A3C;
+        }
+
+        /* ============================================
+           SERVICE CARDS (Xizmatlar)
+           ============================================ */
+        .service-card {
+            background: #2C2C2E;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .service-card:active {
+            transform: scale(0.98);
+            background: #3A3A3C;
+        }
+
+        .service-card .service-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           BANNER/PROMO CARDS
+           ============================================ */
+        .promo-banner {
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .promo-banner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-tg-bg font-tg">
     <!-- ============================================
-         PAGE: HOME (Asosiy sahifa)
+         PAGE: HOME (Asosiy sahifa - Telegram Wallet Style)
          ============================================ -->
     <div id="pageHome" class="page active">
-        <div class="min-h-screen pb-20">
-            <!-- Header -->
-            <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg">
+        <div class="min-h-screen pb-24">
+            <!-- Header - Telegram Style -->
+            <header class="pt-4 px-4 pb-2">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <div class="bg-white bg-opacity-20 p-2 rounded-lg">
-                            <i class="fas fa-chart-line text-xl"></i>
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-tg-blue to-tg-purple flex items-center justify-center">
+                            <i class="fas fa-wallet text-white text-lg"></i>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold">Balans AI - Biznes</h1>
-                            <p class="text-xs text-blue-100" id="lastUpdate">Yuklanmoqda...</p>
+                            <h1 class="text-lg font-semibold text-tg-text">Hamyon</h1>
+                            <p class="text-xs text-tg-hint" id="lastUpdate">Balans AI</p>
                         </div>
                     </div>
-                    <button id="refreshBtn" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition">
-                        <i class="fas fa-sync-alt"></i>
+                    <button id="refreshBtn" class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                        <i class="fas fa-ellipsis-h text-tg-hint"></i>
                     </button>
                 </div>
             </header>
 
-            <!-- Main Content -->
-            <main class="p-4">
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md p-4 border border-green-200">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-gray-600 text-sm mb-1">Kirim</p>
-                                <p class="text-2xl font-bold text-green-700" id="totalIncome">
-                                    <span class="skeleton block h-8 w-24 rounded"></span>
-                                </p>
-                            </div>
-                            <div class="bg-green-200 p-3 rounded-full">
-                                <i class="fas fa-arrow-down text-green-600 text-xl"></i>
-                            </div>
-                        </div>
+            <!-- Tab Switcher (Kripto/TON style) -->
+            <div class="px-4 py-3">
+                <div class="flex justify-center">
+                    <div class="bg-tg-secondary rounded-full p-1 flex">
+                        <button class="tab-switch active px-6 py-2 rounded-full text-sm font-semibold transition-all" data-tab="balance">
+                            Balans
+                        </button>
+                        <button class="tab-switch px-6 py-2 rounded-full text-sm font-semibold text-tg-hint transition-all" data-tab="stats">
+                            Statistika
+                        </button>
                     </div>
-                    <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow-md p-4 border border-red-200">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-gray-600 text-sm mb-1">Chiqim</p>
-                                <p class="text-2xl font-bold text-red-700" id="totalExpense">
-                                    <span class="skeleton block h-8 w-24 rounded"></span>
-                                </p>
-                            </div>
-                            <div class="bg-red-200 p-3 rounded-full">
-                                <i class="fas fa-arrow-up text-red-600 text-xl"></i>
-                            </div>
-                        </div>
+                </div>
+            </div>
+
+            <!-- Balance Display (Telegram Wallet Style) -->
+            <div class="px-4 py-6 text-center">
+                <!-- Progress Circle -->
+                <div class="relative inline-block mb-4">
+                    <svg class="progress-ring" width="160" height="160">
+                        <circle
+                            class="progress-ring__bg"
+                            stroke="#3A3A3C"
+                            stroke-width="8"
+                            fill="transparent"
+                            r="70"
+                            cx="80"
+                            cy="80"/>
+                        <circle
+                            id="progressCircle"
+                            class="progress-ring__circle"
+                            stroke="#007AFF"
+                            stroke-width="8"
+                            fill="transparent"
+                            r="70"
+                            cx="80"
+                            cy="80"
+                            stroke-linecap="round"
+                            stroke-dasharray="439.82"
+                            stroke-dashoffset="110"/>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <p class="text-3xl font-bold text-tg-text" id="totalBalance">0</p>
+                        <p class="text-sm text-tg-hint">UZS</p>
                     </div>
                 </div>
 
-                <!-- Balance Card -->
-                <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-4 mb-6 text-white">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-blue-100 text-sm mb-1">Jami balans</p>
-                            <p class="text-3xl font-bold" id="totalBalance">
-                                <span class="skeleton block h-10 w-32 rounded bg-blue-500"></span>
-                            </p>
+                <!-- Main Balance Text -->
+                <h2 class="text-lg font-medium text-tg-text mb-2">Jami balans</h2>
+                <p class="text-tg-hint text-sm mb-6">Davom etish uchun tugmani bosing</p>
+
+                <!-- CTA Button -->
+                <button class="tg-btn bg-tg-blue text-white px-8 py-3 rounded-full font-semibold text-base">
+                    Davom etish
+                </button>
+            </div>
+
+            <!-- Quick Action Buttons (Telegram Wallet Style) -->
+            <div class="px-4 py-4">
+                <div class="flex justify-around">
+                    <a href="#" data-page="warehouse" class="action-btn nav-link">
+                        <div class="icon-wrapper bg-tg-secondary">
+                            <i class="fas fa-arrow-down text-tg-green text-xl"></i>
                         </div>
-                        <i class="fas fa-wallet text-4xl text-blue-200"></i>
+                        <span class="text-xs text-tg-text font-medium">Kirim</span>
+                    </a>
+                    <a href="#" data-page="reports" class="action-btn nav-link">
+                        <div class="icon-wrapper bg-tg-secondary">
+                            <i class="fas fa-arrow-up text-tg-blue text-xl"></i>
+                        </div>
+                        <span class="text-xs text-tg-text font-medium">Chiqim</span>
+                    </a>
+                    <a href="#" class="action-btn" id="exchangeBtn">
+                        <div class="icon-wrapper bg-tg-secondary">
+                            <i class="fas fa-exchange-alt text-tg-purple text-xl"></i>
+                        </div>
+                        <span class="text-xs text-tg-text font-medium">Almashtirish</span>
+                    </a>
+                    <a href="#" data-page="ai-chat" class="action-btn nav-link">
+                        <div class="icon-wrapper bg-tg-secondary">
+                            <i class="fas fa-robot text-tg-orange text-xl"></i>
+                        </div>
+                        <span class="text-xs text-tg-text font-medium">AI Chat</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Cards (Mini) -->
+            <div class="px-4 py-2">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="tg-card p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-tg-hint text-sm">Kirim</span>
+                            <i class="fas fa-arrow-down text-tg-green text-sm"></i>
+                        </div>
+                        <p class="text-xl font-bold text-tg-green" id="totalIncome">0 UZS</p>
+                    </div>
+                    <div class="tg-card p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-tg-hint text-sm">Chiqim</span>
+                            <i class="fas fa-arrow-up text-tg-red text-sm"></i>
+                        </div>
+                        <p class="text-xl font-bold text-tg-red" id="totalExpense">0 UZS</p>
                     </div>
                 </div>
+            </div>
 
-                <!-- Quick Actions -->
-                <div class="mb-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-lg font-semibold">Tezkor amallar</h2>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <a href="#" data-page="warehouse" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
-                            <div class="bg-gradient-to-br from-blue-100 to-blue-200 p-3 rounded-xl">
-                                <i class="fas fa-boxes text-blue-600 text-xl"></i>
+            <!-- Promo Banner -->
+            <div class="px-4 py-4">
+                <div class="promo-banner">
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-white font-semibold mb-1">Yangiliklar</p>
+                            <p class="text-white/80 text-sm">Telegram hamjamiyatimizda kuzatib boring</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i class="fab fa-telegram text-white text-2xl"></i>
                             </div>
-                            <div class="flex-1">
-                                <p class="font-semibold text-gray-800">Ombor</p>
-                                <p class="text-xs text-gray-500">Mahsulotlar</p>
-                            </div>
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                        </a>
-                        <a href="#" data-page="reports" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
-                            <div class="bg-gradient-to-br from-green-100 to-green-200 p-3 rounded-xl">
-                                <i class="fas fa-chart-bar text-green-600 text-xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="font-semibold text-gray-800">Hisobotlar</p>
-                                <p class="text-xs text-gray-500">Statistika</p>
-                            </div>
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                        </a>
-                        <a href="#" data-page="employees" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
-                            <div class="bg-gradient-to-br from-purple-100 to-purple-200 p-3 rounded-xl">
-                                <i class="fas fa-users text-purple-600 text-xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="font-semibold text-gray-800">Xodimlar</p>
-                                <p class="text-xs text-gray-500">Jamoa</p>
-                            </div>
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                        </a>
-                        <a href="#" data-page="ai-chat" class="nav-link bg-white rounded-xl shadow-md p-4 flex items-center space-x-3 hover:shadow-lg transition-all transform hover:scale-105 border border-gray-100">
-                            <div class="bg-gradient-to-br from-orange-100 to-orange-200 p-3 rounded-xl">
-                                <i class="fas fa-robot text-orange-600 text-xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="font-semibold text-gray-800">AI Chat</p>
-                                <p class="text-xs text-gray-500">Yordamchi</p>
-                            </div>
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="mb-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-lg font-semibold">So'nggi faoliyat</h2>
-                        <button id="viewAllBtn" class="text-blue-600 text-sm font-medium">Barchasini ko'rish</button>
-                    </div>
-                    <div id="recentActivity" class="bg-white rounded-xl shadow-md p-4 border border-gray-100">
-                        <div class="space-y-3">
-                            <div class="skeleton h-16 rounded-lg"></div>
-                            <div class="skeleton h-16 rounded-lg"></div>
-                            <div class="skeleton h-16 rounded-lg"></div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Quick Stats -->
-                <div class="grid grid-cols-3 gap-3 mb-6">
-                    <div class="bg-white rounded-xl shadow-md p-3 text-center border border-gray-100">
-                        <i class="fas fa-box text-blue-600 text-2xl mb-2"></i>
-                        <p class="text-xs text-gray-500 mb-1">Mahsulotlar</p>
-                        <p class="text-lg font-bold text-gray-800" id="totalProducts">-</p>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-md p-3 text-center border border-gray-100">
-                        <i class="fas fa-users text-purple-600 text-2xl mb-2"></i>
-                        <p class="text-xs text-gray-500 mb-1">Xodimlar</p>
-                        <p class="text-lg font-bold text-gray-800" id="totalEmployees">-</p>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-md p-3 text-center border border-gray-100">
-                        <i class="fas fa-tasks text-orange-600 text-2xl mb-2"></i>
-                        <p class="text-xs text-gray-500 mb-1">Vazifalar</p>
-                        <p class="text-lg font-bold text-gray-800" id="totalTasks">-</p>
+            <!-- Services Section (Xizmatlar) -->
+            <div class="px-4 py-2">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-tg-text">Xizmatlar</h2>
+                    <button class="text-tg-blue text-sm font-medium">Barchasi</button>
+                </div>
+
+                <div class="space-y-2">
+                    <!-- Ombor -->
+                    <a href="#" data-page="warehouse" class="service-card nav-link">
+                        <div class="service-icon bg-gradient-to-br from-blue-500 to-blue-600">
+                            <i class="fas fa-boxes text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-tg-text">Ombor</p>
+                            <p class="text-xs text-tg-hint">Mahsulotlarni boshqarish</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-tg-hint"></i>
+                    </a>
+
+                    <!-- Hisobotlar -->
+                    <a href="#" data-page="reports" class="service-card nav-link">
+                        <div class="service-icon bg-gradient-to-br from-green-500 to-green-600">
+                            <i class="fas fa-chart-pie text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-tg-text">Hisobotlar</p>
+                            <p class="text-xs text-tg-hint">Moliyaviy tahlil</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-tg-hint"></i>
+                    </a>
+
+                    <!-- Xodimlar -->
+                    <a href="#" data-page="employees" class="service-card nav-link">
+                        <div class="service-icon bg-gradient-to-br from-purple-500 to-purple-600">
+                            <i class="fas fa-users text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-tg-text">Xodimlar</p>
+                            <p class="text-xs text-tg-hint">Jamoa boshqaruvi</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-tg-hint"></i>
+                    </a>
+
+                    <!-- Kalkulyator -->
+                    <a href="#" class="service-card" id="calculatorBtn">
+                        <div class="service-icon bg-gradient-to-br from-orange-500 to-orange-600">
+                            <i class="fas fa-calculator text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-tg-text">Kalkulyator</p>
+                            <p class="text-xs text-tg-hint">Hisob-kitob</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-tg-hint"></i>
+                    </a>
+
+                    <!-- QR Skaner -->
+                    <a href="#" class="service-card" id="qrScannerBtn">
+                        <div class="service-icon bg-gradient-to-br from-cyan-500 to-cyan-600">
+                            <i class="fas fa-qrcode text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-tg-text">QR Skaner</p>
+                            <p class="text-xs text-tg-hint">Mahsulot qidirish</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-tg-hint"></i>
+                    </a>
+
+                    <!-- Sozlamalar -->
+                    <a href="#" class="service-card" id="settingsBtn">
+                        <div class="service-icon bg-gradient-to-br from-gray-500 to-gray-600">
+                            <i class="fas fa-cog text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-tg-text">Sozlamalar</p>
+                            <p class="text-xs text-tg-hint">Ilova sozlamalari</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-tg-hint"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="px-4 py-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-tg-text">So'nggi faoliyat</h2>
+                    <button id="viewAllBtn" class="text-tg-blue text-sm font-medium">Barchasi</button>
+                </div>
+                <div id="recentActivity" class="tg-card p-4">
+                    <div class="space-y-3">
+                        <div class="skeleton h-14 rounded-xl"></div>
+                        <div class="skeleton h-14 rounded-xl"></div>
+                        <div class="skeleton h-14 rounded-xl"></div>
                     </div>
                 </div>
-            </main>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="px-4 py-2 mb-4">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="tg-card p-3 text-center">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-xl bg-tg-blue/20 flex items-center justify-center">
+                            <i class="fas fa-box text-tg-blue"></i>
+                        </div>
+                        <p class="text-xs text-tg-hint mb-1">Mahsulotlar</p>
+                        <p class="text-lg font-bold text-tg-text" id="totalProducts">-</p>
+                    </div>
+                    <div class="tg-card p-3 text-center">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-xl bg-tg-purple/20 flex items-center justify-center">
+                            <i class="fas fa-users text-tg-purple"></i>
+                        </div>
+                        <p class="text-xs text-tg-hint mb-1">Xodimlar</p>
+                        <p class="text-lg font-bold text-tg-text" id="totalEmployees">-</p>
+                    </div>
+                    <div class="tg-card p-3 text-center">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-xl bg-tg-orange/20 flex items-center justify-center">
+                            <i class="fas fa-tasks text-tg-orange"></i>
+                        </div>
+                        <p class="text-xs text-tg-hint mb-1">Vazifalar</p>
+                        <p class="text-lg font-bold text-tg-text" id="totalTasks">-</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- ============================================
-         PAGE: WAREHOUSE (Ombor)
+         PAGE: WAREHOUSE (Ombor - Telegram Style)
          ============================================ -->
     <div id="pageWarehouse" class="page">
-        <div class="min-h-screen pb-20">
-            <!-- Header -->
-            <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="min-h-screen pb-24 bg-tg-bg">
+            <!-- Header - Telegram Style -->
+            <header class="sticky top-0 z-30 bg-tg-bg/95 backdrop-blur-lg pt-4 px-4 pb-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <button onclick="navigateTo('home')" class="text-white">
-                            <i class="fas fa-arrow-left text-xl"></i>
+                        <button onclick="navigateTo('home')" class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                            <i class="fas fa-arrow-left text-tg-text"></i>
                         </button>
-                        <h1 class="text-xl font-bold">Ombor</h1>
+                        <h1 class="text-xl font-semibold text-tg-text">Ombor</h1>
                     </div>
-                    <button id="addProductBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
-                        <i class="fas fa-plus"></i> Qo'shish
+                    <button id="addProductBtn" class="tg-btn bg-tg-blue text-white px-4 py-2 rounded-full font-semibold text-sm">
+                        <i class="fas fa-plus mr-1"></i> Qo'shish
                     </button>
                 </div>
             </header>
 
-            <!-- Search and Filter -->
-            <div class="p-4 bg-white border-b">
+            <!-- Search and Filter - Telegram Style -->
+            <div class="px-4 py-3">
                 <div class="flex space-x-2">
-                    <input type="text" id="searchInput" placeholder="Qidirish..." 
-                           class="flex-1 border border-gray-300 rounded-lg px-4 py-2">
-                    <button id="filterBtn" class="bg-gray-100 px-4 py-2 rounded-lg">
-                        <i class="fas fa-filter"></i>
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-tg-hint"></i>
+                        <input type="text" id="searchInput" placeholder="Qidirish..."
+                               class="tg-input w-full pl-11">
+                    </div>
+                    <button id="filterBtn" class="tg-btn w-12 h-12 rounded-xl bg-tg-secondary flex items-center justify-center">
+                        <i class="fas fa-sliders-h text-tg-hint"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Products List -->
-            <main class="p-4">
+            <main class="px-4 pb-4">
                 <!-- Loading State -->
                 <div id="loadingState" class="space-y-3">
-                    <div class="skeleton h-24 rounded-xl"></div>
-                    <div class="skeleton h-24 rounded-xl"></div>
-                    <div class="skeleton h-24 rounded-xl"></div>
+                    <div class="skeleton h-20 rounded-2xl"></div>
+                    <div class="skeleton h-20 rounded-2xl"></div>
+                    <div class="skeleton h-20 rounded-2xl"></div>
                 </div>
-                <div id="productsList" class="space-y-3 hidden">
+                <div id="productsList" class="space-y-2 hidden">
                     <!-- Products will be loaded here -->
                 </div>
             </main>
 
-            <!-- Add/Edit Product Modal -->
-            <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold" id="modalTitle">Yangi mahsulot</h2>
-                        <button id="closeModal" class="text-gray-500">
-                            <i class="fas fa-times text-xl"></i>
+            <!-- Add/Edit Product Modal - Telegram Style -->
+            <div id="productModal" class="hidden fixed inset-0 tg-modal z-50 flex items-end sm:items-center justify-center">
+                <div class="tg-modal-content w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-tg-text" id="modalTitle">Yangi mahsulot</h2>
+                        <button id="closeModal" class="tg-btn w-8 h-8 rounded-full bg-tg-tertiary flex items-center justify-center">
+                            <i class="fas fa-times text-tg-hint"></i>
                         </button>
                     </div>
                     <form id="productForm">
                         <input type="hidden" id="productId">
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">Nomi *</label>
-                                <input type="text" id="productName" required
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Nomi *</label>
+                                <input type="text" id="productName" required class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Kategoriya</label>
-                                <input type="text" id="productCategory"
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Kategoriya</label>
+                                <input type="text" id="productCategory" class="tg-input w-full">
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Narxi</label>
-                                    <input type="number" id="productPrice" step="0.01"
-                                           class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <label class="block text-sm font-medium text-tg-hint mb-2">Narxi</label>
+                                    <input type="number" id="productPrice" step="0.01" class="tg-input w-full">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Miqdori</label>
-                                    <input type="number" id="productQuantity"
-                                           class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <label class="block text-sm font-medium text-tg-hint mb-2">Miqdori</label>
+                                    <input type="number" id="productQuantity" class="tg-input w-full">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Min. miqdor</label>
-                                    <input type="number" id="productMinQuantity"
-                                           class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <label class="block text-sm font-medium text-tg-hint mb-2">Min. miqdor</label>
+                                    <input type="number" id="productMinQuantity" class="tg-input w-full">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Birlik</label>
-                                    <select id="productUnit" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <label class="block text-sm font-medium text-tg-hint mb-2">Birlik</label>
+                                    <select id="productUnit" class="tg-input w-full">
                                         <option value="dona">dona</option>
                                         <option value="kg">kg</option>
                                         <option value="litr">litr</option>
@@ -404,21 +755,19 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Barcode</label>
-                                <input type="text" id="productBarcode"
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Barcode</label>
+                                <input type="text" id="productBarcode" class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Rasm URL</label>
-                                <input type="url" id="productImageUrl"
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Rasm URL</label>
+                                <input type="url" id="productImageUrl" class="tg-input w-full">
                             </div>
                         </div>
                         <div class="flex space-x-3 mt-6">
-                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                            <button type="submit" class="tg-btn flex-1 bg-tg-blue text-white py-3 rounded-xl font-semibold">
                                 Saqlash
                             </button>
-                            <button type="button" id="cancelBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                            <button type="button" id="cancelBtn" class="tg-btn flex-1 bg-tg-tertiary text-tg-text py-3 rounded-xl font-semibold">
                                 Bekor qilish
                             </button>
                         </div>
@@ -426,38 +775,36 @@
                 </div>
             </div>
 
-            <!-- Movement Modal -->
-            <div id="movementModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-lg w-full max-w-md p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold" id="movementTitle">Ombor harakati</h2>
-                        <button id="closeMovementModal" class="text-gray-500">
-                            <i class="fas fa-times text-xl"></i>
+            <!-- Movement Modal - Telegram Style -->
+            <div id="movementModal" class="hidden fixed inset-0 tg-modal z-50 flex items-end sm:items-center justify-center">
+                <div class="tg-modal-content w-full sm:max-w-md p-6 rounded-t-3xl sm:rounded-3xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-tg-text" id="movementTitle">Ombor harakati</h2>
+                        <button id="closeMovementModal" class="tg-btn w-8 h-8 rounded-full bg-tg-tertiary flex items-center justify-center">
+                            <i class="fas fa-times text-tg-hint"></i>
                         </button>
                     </div>
                     <form id="movementForm">
                         <input type="hidden" id="movementProductId">
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">Harakat turi *</label>
-                                <select id="movementType" required class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Harakat turi *</label>
+                                <select id="movementType" required class="tg-input w-full">
                                     <option value="in">Kirim</option>
                                     <option value="out">Chiqim</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Miqdori *</label>
-                                <input type="number" id="movementQuantity" required
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Miqdori *</label>
+                                <input type="number" id="movementQuantity" required class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Narxi</label>
-                                <input type="number" id="movementPrice" step="0.01"
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Narxi</label>
+                                <input type="number" id="movementPrice" step="0.01" class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Sabab</label>
-                                <select id="movementReason" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Sabab</label>
+                                <select id="movementReason" class="tg-input w-full">
                                     <option value="purchase">Xarid</option>
                                     <option value="sale">Sotuv</option>
                                     <option value="loss">Yo'qotish</option>
@@ -467,10 +814,10 @@
                             </div>
                         </div>
                         <div class="flex space-x-3 mt-6">
-                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                            <button type="submit" class="tg-btn flex-1 bg-tg-blue text-white py-3 rounded-xl font-semibold">
                                 Saqlash
                             </button>
-                            <button type="button" id="cancelMovementBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                            <button type="button" id="cancelMovementBtn" class="tg-btn flex-1 bg-tg-tertiary text-tg-text py-3 rounded-xl font-semibold">
                                 Bekor qilish
                             </button>
                         </div>
@@ -481,25 +828,28 @@
     </div>
 
     <!-- ============================================
-         PAGE: REPORTS (Hisobotlar)
+         PAGE: REPORTS (Hisobotlar - Telegram Style)
          ============================================ -->
     <div id="pageReports" class="page">
-        <div class="min-h-screen pb-20">
-            <!-- Header -->
-            <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="min-h-screen pb-24 bg-tg-bg">
+            <!-- Header - Telegram Style -->
+            <header class="sticky top-0 z-30 bg-tg-bg/95 backdrop-blur-lg pt-4 px-4 pb-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <button onclick="navigateTo('home')" class="text-white">
-                            <i class="fas fa-arrow-left text-xl"></i>
+                        <button onclick="navigateTo('home')" class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                            <i class="fas fa-arrow-left text-tg-text"></i>
                         </button>
-                        <h1 class="text-xl font-bold">Hisobotlar</h1>
+                        <h1 class="text-xl font-semibold text-tg-text">Hisobotlar</h1>
                     </div>
+                    <button class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                        <i class="fas fa-download text-tg-hint"></i>
+                    </button>
                 </div>
             </header>
 
-            <!-- Period Selector -->
-            <div class="p-4 bg-white border-b">
-                <div class="flex space-x-2 overflow-x-auto">
+            <!-- Period Selector - Telegram Style -->
+            <div class="px-4 py-3">
+                <div class="flex space-x-2 overflow-x-auto pb-1">
                     <button class="period-btn active" data-period="day">Kun</button>
                     <button class="period-btn" data-period="week">Hafta</button>
                     <button class="period-btn" data-period="month">Oy</button>
@@ -507,48 +857,78 @@
                 </div>
             </div>
 
-            <!-- Summary Cards -->
-            <div class="p-4">
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div class="bg-white rounded-lg shadow p-4">
-                        <p class="text-gray-500 text-sm mb-1">Jami kirim</p>
-                        <p class="text-2xl font-bold text-green-600" id="totalIncome">0 UZS</p>
+            <!-- Summary Cards - Telegram Style -->
+            <div class="px-4 py-2">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="tg-card p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-tg-hint text-sm">Jami kirim</span>
+                            <div class="w-8 h-8 rounded-full bg-tg-green/20 flex items-center justify-center">
+                                <i class="fas fa-arrow-down text-tg-green text-xs"></i>
+                            </div>
+                        </div>
+                        <p class="text-xl font-bold text-tg-green" id="reportTotalIncome">0 UZS</p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-4">
-                        <p class="text-gray-500 text-sm mb-1">Jami chiqim</p>
-                        <p class="text-2xl font-bold text-red-600" id="totalExpense">0 UZS</p>
+                    <div class="tg-card p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-tg-hint text-sm">Jami chiqim</span>
+                            <div class="w-8 h-8 rounded-full bg-tg-red/20 flex items-center justify-center">
+                                <i class="fas fa-arrow-up text-tg-red text-xs"></i>
+                            </div>
+                        </div>
+                        <p class="text-xl font-bold text-tg-red" id="reportTotalExpense">0 UZS</p>
                     </div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-4 mb-4">
-                    <p class="text-gray-500 text-sm mb-1">Foyda</p>
-                    <p class="text-2xl font-bold" id="profit">0 UZS</p>
+                <div class="tg-card p-4 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-tg-hint text-sm">Sof foyda</span>
+                        <div class="w-8 h-8 rounded-full bg-tg-blue/20 flex items-center justify-center">
+                            <i class="fas fa-chart-line text-tg-blue text-xs"></i>
+                        </div>
+                    </div>
+                    <p class="text-2xl font-bold text-tg-text" id="profit">0 UZS</p>
                 </div>
             </div>
 
-            <!-- Charts -->
-            <div class="p-4">
-                <div class="bg-white rounded-lg shadow p-4 mb-4">
-                    <h3 class="font-semibold mb-3">Chiqimlar bo'yicha kategoriyalar</h3>
+            <!-- Charts - Telegram Style -->
+            <div class="px-4 py-2">
+                <div class="tg-card p-4 mb-4">
+                    <h3 class="font-semibold text-tg-text mb-4">Chiqimlar bo'yicha kategoriyalar</h3>
                     <canvas id="categoriesChart" height="200"></canvas>
                 </div>
             </div>
 
-            <!-- Warehouse Stats -->
-            <div class="p-4">
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h3 class="font-semibold mb-3">Ombor statistikasi</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Jami mahsulotlar:</span>
-                            <span class="font-semibold" id="totalProducts">0</span>
+            <!-- Warehouse Stats - Telegram Style -->
+            <div class="px-4 py-2 mb-4">
+                <div class="tg-card p-4">
+                    <h3 class="font-semibold text-tg-text mb-4">Ombor statistikasi</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-tg-blue/20 flex items-center justify-center">
+                                    <i class="fas fa-box text-tg-blue"></i>
+                                </div>
+                                <span class="text-tg-hint">Jami mahsulotlar</span>
+                            </div>
+                            <span class="font-semibold text-tg-text" id="reportTotalProducts">0</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Ombor qiymati:</span>
-                            <span class="font-semibold" id="warehouseValue">0 UZS</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-tg-green/20 flex items-center justify-center">
+                                    <i class="fas fa-coins text-tg-green"></i>
+                                </div>
+                                <span class="text-tg-hint">Ombor qiymati</span>
+                            </div>
+                            <span class="font-semibold text-tg-text" id="warehouseValue">0 UZS</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Kam qolganlar:</span>
-                            <span class="font-semibold text-red-600" id="lowStock">0</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-tg-red/20 flex items-center justify-center">
+                                    <i class="fas fa-exclamation-triangle text-tg-red"></i>
+                                </div>
+                                <span class="text-tg-hint">Kam qolganlar</span>
+                            </div>
+                            <span class="font-semibold text-tg-red" id="lowStock">0</span>
                         </div>
                     </div>
                 </div>
@@ -557,32 +937,32 @@
     </div>
 
     <!-- ============================================
-         PAGE: EMPLOYEES (Xodimlar)
+         PAGE: EMPLOYEES (Xodimlar - Telegram Style)
          ============================================ -->
     <div id="pageEmployees" class="page">
-        <div class="min-h-screen pb-20">
-            <!-- Header -->
-            <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="min-h-screen pb-24 bg-tg-bg">
+            <!-- Header - Telegram Style -->
+            <header class="sticky top-0 z-30 bg-tg-bg/95 backdrop-blur-lg pt-4 px-4 pb-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <button onclick="navigateTo('home')" class="text-white">
-                            <i class="fas fa-arrow-left text-xl"></i>
+                        <button onclick="navigateTo('home')" class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                            <i class="fas fa-arrow-left text-tg-text"></i>
                         </button>
-                        <h1 class="text-xl font-bold">Xodimlar</h1>
+                        <h1 class="text-xl font-semibold text-tg-text">Xodimlar</h1>
                     </div>
-                    <button id="addEmployeeBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
-                        <i class="fas fa-plus"></i> Qo'shish
+                    <button id="addEmployeeBtn" class="tg-btn bg-tg-blue text-white px-4 py-2 rounded-full font-semibold text-sm">
+                        <i class="fas fa-plus mr-1"></i> Qo'shish
                     </button>
                 </div>
             </header>
 
-            <!-- Tabs -->
-            <div class="bg-white border-b">
-                <div class="flex">
-                    <button class="tab-btn active flex-1 py-3 border-b-2 border-blue-600 text-blue-600 font-semibold" data-tab="employees">
+            <!-- Tabs - Telegram Style -->
+            <div class="px-4 py-2">
+                <div class="bg-tg-secondary rounded-full p-1 flex">
+                    <button class="tab-btn active flex-1 py-2 rounded-full text-sm font-semibold transition-all" data-tab="employees">
                         Xodimlar
                     </button>
-                    <button class="tab-btn flex-1 py-3 border-b-2 border-transparent text-gray-500" data-tab="tasks">
+                    <button class="tab-btn flex-1 py-2 rounded-full text-sm font-semibold text-tg-hint transition-all" data-tab="tasks">
                         Vazifalar
                     </button>
                 </div>
@@ -590,74 +970,78 @@
 
             <!-- Employees Tab -->
             <div id="employeesTab" class="tab-content">
-                <div class="p-4">
-                    <div id="employeesList" class="space-y-3">
-                        <p class="text-gray-500 text-center py-8">Xodimlar yuklanmoqda...</p>
+                <div class="px-4 py-2">
+                    <div id="employeesList" class="space-y-2">
+                        <div class="skeleton h-16 rounded-2xl"></div>
+                        <div class="skeleton h-16 rounded-2xl"></div>
+                        <div class="skeleton h-16 rounded-2xl"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Tasks Tab -->
             <div id="tasksTab" class="tab-content hidden">
-                <div class="p-4">
+                <div class="px-4 py-2">
                     <div class="mb-4 flex items-center justify-between">
-                        <div class="flex space-x-2 overflow-x-auto">
+                        <div class="flex space-x-2 overflow-x-auto pb-1">
                             <button class="status-filter active" data-status="">Barchasi</button>
                             <button class="status-filter" data-status="pending">Kutilmoqda</button>
                             <button class="status-filter" data-status="in_progress">Jarayonda</button>
                             <button class="status-filter" data-status="completed">Bajarilgan</button>
                         </div>
-                        <button id="addTaskBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold ml-2">
-                            <i class="fas fa-plus"></i> Vazifa
+                    </div>
+                    <div class="flex justify-end mb-3">
+                        <button id="addTaskBtn" class="tg-btn bg-tg-blue text-white px-4 py-2 rounded-full font-semibold text-sm">
+                            <i class="fas fa-plus mr-1"></i> Vazifa
                         </button>
                     </div>
-                    <div id="tasksList" class="space-y-3">
-                        <p class="text-gray-500 text-center py-8">Vazifalar yuklanmoqda...</p>
+                    <div id="tasksList" class="space-y-2">
+                        <div class="skeleton h-16 rounded-2xl"></div>
+                        <div class="skeleton h-16 rounded-2xl"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Add/Edit Employee Modal -->
-            <div id="employeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-lg w-full max-w-md p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold" id="employeeModalTitle">Yangi xodim</h2>
-                        <button id="closeEmployeeModal" class="text-gray-500">
-                            <i class="fas fa-times text-xl"></i>
+            <!-- Add/Edit Employee Modal - Telegram Style -->
+            <div id="employeeModal" class="hidden fixed inset-0 tg-modal z-50 flex items-end sm:items-center justify-center">
+                <div class="tg-modal-content w-full sm:max-w-md p-6 rounded-t-3xl sm:rounded-3xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-tg-text" id="employeeModalTitle">Yangi xodim</h2>
+                        <button id="closeEmployeeModal" class="tg-btn w-8 h-8 rounded-full bg-tg-tertiary flex items-center justify-center">
+                            <i class="fas fa-times text-tg-hint"></i>
                         </button>
                     </div>
                     <form id="employeeForm">
                         <input type="hidden" id="employeeId">
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">Ism *</label>
-                                <input type="text" id="employeeName" required
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Ism *</label>
+                                <input type="text" id="employeeName" required class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Telegram ID *</label>
-                                <input type="number" id="employeeTelegramId" required
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Telegram ID *</label>
+                                <input type="number" id="employeeTelegramId" required class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Rol</label>
-                                <select id="employeeRole" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Rol</label>
+                                <select id="employeeRole" class="tg-input w-full">
                                     <option value="employee">Xodim</option>
                                     <option value="manager">Menejer</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="flex items-center space-x-2">
-                                    <input type="checkbox" id="employeeIsActive" checked class="rounded">
-                                    <span>Faol</span>
+                            <div class="tg-card p-4 flex items-center justify-between">
+                                <span class="text-tg-text">Faol</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="employeeIsActive" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-tg-tertiary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tg-blue"></div>
                                 </label>
                             </div>
                         </div>
                         <div class="flex space-x-3 mt-6">
-                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                            <button type="submit" class="tg-btn flex-1 bg-tg-blue text-white py-3 rounded-xl font-semibold">
                                 Saqlash
                             </button>
-                            <button type="button" id="cancelEmployeeBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                            <button type="button" id="cancelEmployeeBtn" class="tg-btn flex-1 bg-tg-tertiary text-tg-text py-3 rounded-xl font-semibold">
                                 Bekor qilish
                             </button>
                         </div>
@@ -665,42 +1049,39 @@
                 </div>
             </div>
 
-            <!-- Add/Edit Task Modal -->
-            <div id="taskModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold" id="taskModalTitle">Yangi vazifa</h2>
-                        <button id="closeTaskModal" class="text-gray-500">
-                            <i class="fas fa-times text-xl"></i>
+            <!-- Add/Edit Task Modal - Telegram Style -->
+            <div id="taskModal" class="hidden fixed inset-0 tg-modal z-50 flex items-end sm:items-center justify-center">
+                <div class="tg-modal-content w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-tg-text" id="taskModalTitle">Yangi vazifa</h2>
+                        <button id="closeTaskModal" class="tg-btn w-8 h-8 rounded-full bg-tg-tertiary flex items-center justify-center">
+                            <i class="fas fa-times text-tg-hint"></i>
                         </button>
                     </div>
                     <form id="taskForm">
                         <input type="hidden" id="taskId">
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">Sarlavha *</label>
-                                <input type="text" id="taskTitle" required
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Sarlavha *</label>
+                                <input type="text" id="taskTitle" required class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Tavsif</label>
-                                <textarea id="taskDescription" rows="3"
-                                          class="w-full border border-gray-300 rounded-lg px-4 py-2"></textarea>
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Tavsif</label>
+                                <textarea id="taskDescription" rows="3" class="tg-input w-full resize-none"></textarea>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Xodim</label>
-                                <select id="taskEmployeeId" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Xodim</label>
+                                <select id="taskEmployeeId" class="tg-input w-full">
                                     <option value="">Xodim tanlash</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Muddat</label>
-                                <input type="datetime-local" id="taskDueDate"
-                                       class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Muddat</label>
+                                <input type="datetime-local" id="taskDueDate" class="tg-input w-full">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Holat</label>
-                                <select id="taskStatus" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <label class="block text-sm font-medium text-tg-hint mb-2">Holat</label>
+                                <select id="taskStatus" class="tg-input w-full">
                                     <option value="pending">Kutilmoqda</option>
                                     <option value="in_progress">Jarayonda</option>
                                     <option value="completed">Bajarilgan</option>
@@ -709,10 +1090,10 @@
                             </div>
                         </div>
                         <div class="flex space-x-3 mt-6">
-                            <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">
+                            <button type="submit" class="tg-btn flex-1 bg-tg-blue text-white py-3 rounded-xl font-semibold">
                                 Saqlash
                             </button>
-                            <button type="button" id="cancelTaskBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold">
+                            <button type="button" id="cancelTaskBtn" class="tg-btn flex-1 bg-tg-tertiary text-tg-text py-3 rounded-xl font-semibold">
                                 Bekor qilish
                             </button>
                         </div>
@@ -723,41 +1104,61 @@
     </div>
 
     <!-- ============================================
-         PAGE: AI CHAT
+         PAGE: AI CHAT (Telegram Style)
          ============================================ -->
     <div id="pageAiChat" class="page">
-        <div class="min-h-screen pb-20 flex flex-col">
-            <!-- Header -->
-            <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="min-h-screen pb-24 flex flex-col bg-tg-bg">
+            <!-- Header - Telegram Style -->
+            <header class="sticky top-0 z-30 bg-tg-bg/95 backdrop-blur-lg pt-4 px-4 pb-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <button onclick="navigateTo('home')" class="text-white">
-                            <i class="fas fa-arrow-left text-xl"></i>
+                        <button onclick="navigateTo('home')" class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                            <i class="fas fa-arrow-left text-tg-text"></i>
                         </button>
-                        <h1 class="text-xl font-bold">AI Yordamchi</h1>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-tg-blue to-tg-purple flex items-center justify-center">
+                                <i class="fas fa-robot text-white"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-base font-semibold text-tg-text">AI Yordamchi</h1>
+                                <p class="text-xs text-tg-green">Online</p>
+                            </div>
+                        </div>
                     </div>
+                    <button class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center">
+                        <i class="fas fa-ellipsis-v text-tg-hint"></i>
+                    </button>
                 </div>
             </header>
 
-            <!-- Chat Messages -->
-            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <div class="flex items-start space-x-2">
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <i class="fas fa-robot text-blue-600"></i>
+            <!-- Chat Messages - Telegram Style -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                <div class="flex items-end space-x-2 max-w-[85%]">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-tg-blue to-tg-purple flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-white text-xs"></i>
                     </div>
-                    <div class="flex-1 bg-white rounded-lg p-3 shadow">
-                        <p class="text-sm">Salom! Men sizning biznesingizga yordam berishga tayyorman. Savolingizni yozing.</p>
+                    <div class="bg-tg-secondary rounded-2xl rounded-bl-md px-4 py-3">
+                        <p class="text-sm text-tg-text">Salom! Men sizning biznesingizga yordam berishga tayyorman. Savolingizni yozing.</p>
+                        <p class="text-xs text-tg-hint mt-1 text-right">12:00</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Input Area -->
-            <div class="bg-white border-t border-gray-200 p-4">
-                <div class="flex space-x-2">
-                    <input type="text" id="messageInput" placeholder="Xabar yozing..." 
-                           class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="sendBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg">
-                        <i class="fas fa-paper-plane"></i>
+            <!-- Input Area - Telegram Style -->
+            <div class="sticky bottom-0 bg-tg-bg border-t border-tg-border px-4 py-3">
+                <div class="flex items-center space-x-3">
+                    <button class="tg-btn w-10 h-10 rounded-full bg-tg-secondary flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-paperclip text-tg-hint"></i>
+                    </button>
+                    <div class="flex-1 relative">
+                        <input type="text" id="messageInput" placeholder="Xabar yozing..."
+                               class="tg-input w-full pr-12">
+                        <button class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-tg-hint">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                    </div>
+                    <button id="sendBtn" class="tg-btn w-10 h-10 rounded-full bg-tg-blue flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-paper-plane text-white"></i>
                     </button>
                 </div>
             </div>
@@ -765,25 +1166,25 @@
     </div>
 
     <!-- ============================================
-         BOTTOM NAVIGATION
+         BOTTOM NAVIGATION (Telegram Style)
          ============================================ -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-        <div class="flex justify-around py-2">
-            <a href="#" data-page="home" class="nav-item flex flex-col items-center p-2 text-blue-600 active">
-                <i class="fas fa-home text-xl"></i>
-                <span class="text-xs mt-1">Bosh sahifa</span>
+    <nav class="fixed bottom-0 left-0 right-0 bg-tg-secondary/95 backdrop-blur-lg border-t border-tg-border z-40 safe-area-bottom">
+        <div class="flex justify-around py-2 px-2">
+            <a href="#" data-page="home" class="nav-item flex flex-col items-center py-2 px-4 rounded-xl active">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Asosiy</span>
             </a>
-            <a href="#" data-page="warehouse" class="nav-item flex flex-col items-center p-2 text-gray-400">
-                <i class="fas fa-boxes text-xl"></i>
-                <span class="text-xs mt-1">Ombor</span>
+            <a href="#" data-page="warehouse" class="nav-item flex flex-col items-center py-2 px-4 rounded-xl">
+                <i class="fas fa-boxes text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Ombor</span>
             </a>
-            <a href="#" data-page="reports" class="nav-item flex flex-col items-center p-2 text-gray-400">
-                <i class="fas fa-chart-bar text-xl"></i>
-                <span class="text-xs mt-1">Hisobotlar</span>
+            <a href="#" data-page="reports" class="nav-item flex flex-col items-center py-2 px-4 rounded-xl">
+                <i class="fas fa-chart-pie text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Hisobotlar</span>
             </a>
-            <a href="#" data-page="employees" class="nav-item flex flex-col items-center p-2 text-gray-400">
-                <i class="fas fa-users text-xl"></i>
-                <span class="text-xs mt-1">Xodimlar</span>
+            <a href="#" data-page="employees" class="nav-item flex flex-col items-center py-2 px-4 rounded-xl">
+                <i class="fas fa-users text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Xodimlar</span>
             </a>
         </div>
     </nav>

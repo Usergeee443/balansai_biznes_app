@@ -344,12 +344,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
             document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('active', 'border-blue-600', 'text-blue-600');
-                b.classList.add('border-transparent', 'text-gray-500');
+                b.classList.remove('active', 'text-tg-text', 'bg-tg-secondary');
+                b.classList.add('text-tg-hint');
             });
-            btn.classList.add('active', 'border-blue-600', 'text-blue-600');
-            btn.classList.remove('border-transparent', 'text-gray-500');
-            
+            btn.classList.add('active', 'text-tg-text', 'bg-tg-secondary');
+            btn.classList.remove('text-tg-hint');
+
             document.getElementById('employeesTab').classList.toggle('hidden', tab !== 'employees');
             document.getElementById('tasksTab').classList.toggle('hidden', tab !== 'tasks');
         });

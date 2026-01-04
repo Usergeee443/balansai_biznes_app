@@ -1446,6 +1446,66 @@
                 loadPageData('warehouse') // Pre-load warehouse
             ]);
 
+            // Calculator button
+            const calculatorBtn = document.getElementById('calculatorBtn');
+            if (calculatorBtn) {
+                calculatorBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.tg && window.tg.showAlert) {
+                        window.tg.showAlert('Kalkulyator funksiyasi tez orada qo\'shiladi!');
+                    } else {
+                        alert('Kalkulyator funksiyasi tez orada qo\'shiladi!');
+                    }
+                });
+            }
+
+            // QR Scanner button
+            const qrScannerBtn = document.getElementById('qrScannerBtn');
+            if (qrScannerBtn) {
+                qrScannerBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.tg && window.tg.showScanQrPopup) {
+                        window.tg.showScanQrPopup({
+                            text: 'QR kodni skanerlang'
+                        }, (result) => {
+                            if (result) {
+                                window.tg.showAlert('QR kod: ' + result);
+                            }
+                        });
+                    } else if (window.tg && window.tg.showAlert) {
+                        window.tg.showAlert('QR skaner funksiyasi faqat Telegram Mini App ichida ishlaydi.');
+                    } else {
+                        alert('QR skaner funksiyasi faqat Telegram Mini App ichida ishlaydi.');
+                    }
+                });
+            }
+
+            // Settings button
+            const settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.tg && window.tg.showAlert) {
+                        window.tg.showAlert('Sozlamalar sahifasi tez orada qo\'shiladi!');
+                    } else {
+                        alert('Sozlamalar sahifasi tez orada qo\'shiladi!');
+                    }
+                });
+            }
+
+            // Exchange button (Almashtirish)
+            const exchangeBtn = document.getElementById('exchangeBtn');
+            if (exchangeBtn) {
+                exchangeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.tg && window.tg.showAlert) {
+                        window.tg.showAlert('Valyuta almashtirish funksiyasi tez orada qo\'shiladi!');
+                    } else {
+                        alert('Valyuta almashtirish funksiyasi tez orada qo\'shiladi!');
+                    }
+                });
+            }
+
             // Initialize home page
             initPage('home');
         });

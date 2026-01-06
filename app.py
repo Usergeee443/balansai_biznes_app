@@ -28,21 +28,16 @@ def ensure_test_user_exists(user_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # User mavjudligini tekshirish
-            cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-            if cursor.fetchone():
-                connection.close()
-                return
-            
-            # User yaratish
+            # User yaratish yoki yangilash - development uchun business plan bilan
             try:
                 cursor.execute(
-                    """INSERT INTO users (user_id, username, first_name, created_at) 
-                       VALUES (%s, %s, %s, NOW()) 
-                       ON DUPLICATE KEY UPDATE username = username""",
-                    (user_id, 'test_user', 'Test User')
+                    """INSERT INTO users (user_id, username, first_name, subscription_type, created_at)
+                       VALUES (%s, %s, %s, %s, NOW())
+                       ON DUPLICATE KEY UPDATE subscription_type = 'business'""",
+                    (user_id, 'test_user', 'Test User', 'business')
                 )
                 connection.commit()
+                print(f"Test user yaratildi/yangilandi: user_id={user_id}, subscription_type=business")
             except Exception as e:
                 # Agar users jadvali mavjud bo'lmasa yoki boshqa xatolik bo'lsa, ignore qilish
                 print(f"Test user yaratishda xatolik (ehtimol users jadvali mavjud emas): {e}")
@@ -274,10 +269,6 @@ def check_telegram_auth():
     if not request.path.startswith('/api/'):
         return None
 
-    # /api/check-plan endpoint'ga ruxsat berish
-    if request.path == '/api/check-plan':
-        return None
-
     init_data = request.headers.get('X-Telegram-Init-Data') or request.args.get('initData')
 
     # Development mode: Agar initData bo'lmasa, test user_id bilan ishlash
@@ -330,20 +321,26 @@ def check_plan():
     """User'ning business plan'ini tekshirish"""
     try:
         user_id = session.get('user_id')
+        print(f"DEBUG /api/check-plan: user_id={user_id}")
+
         if not user_id:
+            print("DEBUG /api/check-plan: user_id yo'q, has_business_plan=False qaytarilmoqda")
             return jsonify({
                 'success': True,
-                'has_business_plan': False, 
+                'has_business_plan': False,
                 'redirect': BUSINESS_PLAN_REDIRECT_URL
             }), 200
 
         has_plan = check_business_plan(user_id)
+        print(f"DEBUG /api/check-plan: user_id={user_id}, has_business_plan={has_plan}")
+
         return jsonify({
             'success': True,
             'has_business_plan': has_plan,
             'redirect': BUSINESS_PLAN_REDIRECT_URL if not has_plan else None
         })
     except Exception as e:
+        print(f"ERROR /api/check-plan: {e}")
         return handle_api_error(e, 'Business plan tekshirishda xatolik')
 
 @app.route('/')

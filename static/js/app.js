@@ -43,6 +43,9 @@ function getAuthHeaders() {
     };
 }
 
+// Global qilish (index.html'da ishlatish uchun)
+window.getAuthHeaders = getAuthHeaders;
+
 // API request funksiyasi
 async function apiRequest(endpoint, options = {}, useCache = true) {
     // Cache tekshirish

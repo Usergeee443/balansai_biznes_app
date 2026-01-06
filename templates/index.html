@@ -1420,6 +1420,41 @@
         // ============================================
         // EVENT LISTENERS
         // ============================================
+        // getAuthHeaders funksiyasi (app.js yuklanguncha kutish uchun)
+        function getAuthHeaders() {
+            // app.js'dan olish yoki o'zi yaratish
+            if (window.getAuthHeaders) {
+                return window.getAuthHeaders();
+            }
+            
+            // Agar app.js yuklanmagan bo'lsa, o'zi yaratish
+            const tg = window.Telegram?.WebApp || {};
+            let initData = '';
+            
+            if (tg.initData) {
+                initData = tg.initData;
+            } else if (tg.initDataUnsafe) {
+                if (typeof tg.initDataUnsafe === 'string') {
+                    initData = tg.initDataUnsafe;
+                } else if (tg.initDataUnsafe.query_id) {
+                    const params = new URLSearchParams();
+                    for (const key in tg.initDataUnsafe) {
+                        if (typeof tg.initDataUnsafe[key] === 'object') {
+                            params.append(key, JSON.stringify(tg.initDataUnsafe[key]));
+                        } else {
+                            params.append(key, tg.initDataUnsafe[key]);
+                        }
+                    }
+                    initData = params.toString();
+                }
+            }
+            
+            return {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': initData
+            };
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             // Telegram WebApp setup
             if (window.tg) {
@@ -1427,6 +1462,56 @@
                 window.tg.expand();
                 window.tg.setHeaderColor('#2563eb');
                 window.tg.setBackgroundColor('#f5f5f5');
+            }
+
+            // Business plan tekshirish - ILK ISH (MUHIM!)
+            try {
+                const planCheckResponse = await fetch('/api/check-plan', {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                });
+                
+                if (planCheckResponse.ok) {
+                    const planData = await planCheckResponse.json();
+                    // Business plan yo'q bo'lsa, darhol redirect qilish
+                    if (!planData.has_business_plan) {
+                        const redirectUrl = planData.redirect || 'https://balansai-app.onrender.com';
+                        
+                        // Telegram Mini App ichida bo'lsa
+                        if (window.tg && window.tg.openLink) {
+                            window.tg.openLink(redirectUrl);
+                        } else {
+                            // Oddiy browser'da
+                            window.location.href = redirectUrl;
+                        }
+                        
+                        // Sahifani to'xtatish
+                        document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui"><p>Yo\'naltirilmoqda...</p></div>';
+                        return; // Keyingi kod ishlamasligi uchun
+                    }
+                } else {
+                    // API xatolik bo'lsa ham, xavfsizlik uchun redirect qilish
+                    console.error('Business plan tekshirishda xatolik:', planCheckResponse.status);
+                    const redirectUrl = 'https://balansai-app.onrender.com';
+                    if (window.tg && window.tg.openLink) {
+                        window.tg.openLink(redirectUrl);
+                    } else {
+                        window.location.href = redirectUrl;
+                    }
+                    document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui"><p>Yo\'naltirilmoqda...</p></div>';
+                    return;
+                }
+            } catch (error) {
+                console.error('Business plan tekshirishda xatolik:', error);
+                // Xatolik bo'lsa, xavfsizlik uchun redirect qilish
+                const redirectUrl = 'https://balansai-app.onrender.com';
+                if (window.tg && window.tg.openLink) {
+                    window.tg.openLink(redirectUrl);
+                } else {
+                    window.location.href = redirectUrl;
+                }
+                document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui"><p>Yo\'naltirilmoqda...</p></div>';
+                return;
             }
 
             // Navigation links

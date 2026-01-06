@@ -16,12 +16,13 @@ CORS(app)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN', '')
 BUSINESS_PLAN_REDIRECT_URL = os.getenv('BUSINESS_PLAN_REDIRECT_URL', 'https://balansai-app.onrender.com')
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'  # Development uchun default True
 
 # Test user yaratish funksiyasi (development uchun)
 def ensure_test_user_exists(user_id):
     """Test user_id'ni users jadvaliga qo'shadi (agar mavjud bo'lmasa)"""
-    if not app.debug:
+    is_development = DEBUG or app.debug or os.getenv('FLASK_ENV') == 'development' or not os.getenv('BOT_TOKEN')
+    if not is_development:
         return
     
     try:
@@ -53,38 +54,228 @@ def ensure_test_user_exists(user_id):
 
 # User business plan tekshirish
 def check_business_plan(user_id):
-    """User'ning business plan'i borligini tekshirish"""
+    """User'ning business plan'i borligini tekshirish
+    Business tarifi yoki sinov muddatli business tarifi (business_trial) qabul qilinadi
+    """
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # subscription_type va subscription_expires_at ni olish
             cursor.execute(
-                "SELECT subscription_type FROM users WHERE user_id = %s",
+                """SELECT subscription_type, subscription_expires_at 
+                   FROM users WHERE user_id = %s""",
                 (user_id,)
             )
             result = cursor.fetchone()
         connection.close()
 
-        if result:
-            return result.get('subscription_type') == 'business'
+        if not result:
+            return False
+        
+        subscription_type = result.get('subscription_type')
+        subscription_expires_at = result.get('subscription_expires_at')
+        
+        # Debug: subscription_type va muddatni ko'rsatish
+        print(f"DEBUG: user_id={user_id}, subscription_type={subscription_type}, subscription_expires_at={subscription_expires_at}")
+        
+        # Business tarifi yoki sinov muddatli business tarifi
+        # subscription_type 'business', 'business_trial' yoki boshqa formatda bo'lishi mumkin
+        is_business_type = subscription_type and (
+            subscription_type.lower() in ['business', 'business_trial', 'trial'] or
+            'business' in subscription_type.lower()
+        )
+        
+        if is_business_type:
+            # Agar muddat belgilangan bo'lsa, tekshirish
+            if subscription_expires_at:
+                from datetime import datetime
+                try:
+                    # subscription_expires_at datetime yoki string bo'lishi mumkin
+                    if isinstance(subscription_expires_at, str):
+                        # Turli formatlarni qo'llab-quvvatlash
+                        try:
+                            expires_at = datetime.strptime(subscription_expires_at, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            try:
+                                expires_at = datetime.strptime(subscription_expires_at, '%Y-%m-%d')
+                            except:
+                                expires_at = datetime.fromisoformat(subscription_expires_at.replace('Z', '+00:00'))
+                    else:
+                        expires_at = subscription_expires_at
+                    
+                    # Hozirgi vaqt bilan solishtirish
+                    now = datetime.now()
+                    if expires_at.tzinfo:
+                        # Timezone bo'lsa, local time'ga o'tkazish
+                        from datetime import timezone
+                        now = datetime.now(timezone.utc)
+                    
+                    if expires_at >= now:
+                        return True  # Muddat hali tugamagan
+                    else:
+                        print(f"Business plan muddati tugagan: {expires_at} < {now}")
+                        return False  # Muddat tugagan
+                except Exception as e:
+                    print(f"Muddat tekshirishda xatolik: {e}, subscription_expires_at: {subscription_expires_at}")
+                    # Xatolik bo'lsa, subscription_type'ga qarab qaytarish (xavfsizlik uchun)
+                    return True  # Xatolik bo'lsa, ruxsat berish
+            else:
+                # Muddat belgilanmagan, subscription_type'ga qarab qaytarish
+                return True
+        
         return False
     except Exception as e:
         print(f"Business plan tekshirishda xatolik: {e}")
         # Development mode'da hamma user'ga ruxsat berish
         return DEBUG
 
+# Xatolarni boshqarish funksiyasi
+def handle_api_error(error, default_message="Xatolik yuz berdi"):
+    """API xatolarini boshqarish"""
+    error_message = str(error) if error else default_message
+    print(f"API xatolik: {error_message}")
+    
+    # Database xatoliklari
+    if "connection" in error_message.lower() or "database" in error_message.lower():
+        return jsonify({
+            'success': False, 
+            'error': 'Ma\'lumotlar bazasi bilan bog\'lanishda xatolik'
+        }), 500
+    
+    # Validation xatoliklari
+    if "required" in error_message.lower() or "invalid" in error_message.lower():
+        return jsonify({
+            'success': False, 
+            'error': error_message
+        }), 400
+    
+    # Umumiy xatolik
+    return jsonify({
+        'success': False, 
+        'error': default_message if DEBUG else 'Xatolik yuz berdi'
+    }), 500
+
 # Middleware: Telegram auth tekshirish
 @app.before_request
 def check_telegram_auth():
     """Har bir request'da Telegram auth'ni tekshirish"""
-    # Static fayllar va HTML sahifalar uchun auth talab qilinmaydi
-    if (request.path.startswith('/static') or
-        request.path == '/' or
-        request.path == '/api/check-plan' or
-        request.path in ['/warehouse', '/reports', '/employees', '/ai-chat']):
+    # Static fayllar uchun auth talab qilinmaydi
+    if request.path.startswith('/static'):
+        return None
+    
+    # HTML sahifalar uchun business plan tekshirish va redirect
+    if request.path in ['/', '/warehouse', '/reports', '/employees', '/ai-chat']:
+        init_data = request.headers.get('X-Telegram-Init-Data') or request.args.get('initData')
+        
+        # Development mode: Agar initData bo'lmasa
+        is_development = DEBUG or app.debug or os.getenv('FLASK_ENV') == 'development' or not os.getenv('BOT_TOKEN')
+        
+        if init_data:
+            try:
+                user_data = validate_telegram_init_data(init_data, BOT_TOKEN)
+                user_id = user_data.get('user_id')
+                session['user_id'] = user_id
+                session['username'] = user_data.get('username')
+                
+                # Business plan tekshirish - MUHIM!
+                has_business_plan = check_business_plan(user_id)
+                session['has_business_plan'] = has_business_plan
+                
+                # Agar business plan bo'lmasa, darhol redirect qilish
+                if not has_business_plan and not is_development:
+                    # JavaScript orqali redirect qiladigan sahifa yuborish
+                    redirect_html = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Redirecting...</title>
+                        <script src="https://telegram.org/js/telegram-web-app.js"></script>
+                    </head>
+                    <body>
+                        <script>
+                            if (window.Telegram && window.Telegram.WebApp) {{
+                                window.Telegram.WebApp.openLink('{BUSINESS_PLAN_REDIRECT_URL}');
+                            }} else {{
+                                window.location.href = '{BUSINESS_PLAN_REDIRECT_URL}';
+                            }}
+                        </script>
+                        <p>Yo'naltirilmoqda...</p>
+                    </body>
+                    </html>
+                    """
+                    return make_response(redirect_html)
+                    
+            except (ValueError, Exception) as e:
+                # Development mode
+                if is_development:
+                    test_user_id = 123456789
+                    ensure_test_user_exists(test_user_id)
+                    session['user_id'] = test_user_id
+                    session['username'] = 'test_user'
+                    session['has_business_plan'] = True
+                else:
+                    # Production'da xatolik bo'lsa, redirect qilish
+                    redirect_html = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Redirecting...</title>
+                        <script src="https://telegram.org/js/telegram-web-app.js"></script>
+                    </head>
+                    <body>
+                        <script>
+                            if (window.Telegram && window.Telegram.WebApp) {{
+                                window.Telegram.WebApp.openLink('{BUSINESS_PLAN_REDIRECT_URL}');
+                            }} else {{
+                                window.location.href = '{BUSINESS_PLAN_REDIRECT_URL}';
+                            }}
+                        </script>
+                        <p>Yo'naltirilmoqda...</p>
+                    </body>
+                    </html>
+                    """
+                    return make_response(redirect_html)
+        else:
+            # Development mode: Agar initData bo'lmasa
+            if is_development:
+                test_user_id = 123456789
+                ensure_test_user_exists(test_user_id)
+                session['user_id'] = test_user_id
+                session['username'] = 'test_user'
+                session['has_business_plan'] = True
+            else:
+                # Production'da initData bo'lmasa, redirect qilish
+                redirect_html = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Redirecting...</title>
+                    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+                </head>
+                <body>
+                    <script>
+                        if (window.Telegram && window.Telegram.WebApp) {{
+                            window.Telegram.WebApp.openLink('{BUSINESS_PLAN_REDIRECT_URL}');
+                        }} else {{
+                            window.location.href = '{BUSINESS_PLAN_REDIRECT_URL}';
+                        }}
+                    </script>
+                    <p>Yo'naltirilmoqda...</p>
+                </body>
+                </html>
+                """
+                return make_response(redirect_html)
         return None
 
-    # Faqat API endpoint'lar uchun auth talab qilinadi
+    # API endpoint'lar uchun auth talab qilinadi
     if not request.path.startswith('/api/'):
+        return None
+
+    # /api/check-plan endpoint'ga ruxsat berish
+    if request.path == '/api/check-plan':
         return None
 
     init_data = request.headers.get('X-Telegram-Init-Data') or request.args.get('initData')
@@ -92,7 +283,9 @@ def check_telegram_auth():
     # Development mode: Agar initData bo'lmasa, test user_id bilan ishlash
     if not init_data:
         # Development uchun test user_id (production'da o'chirilishi kerak)
-        if DEBUG or app.debug:
+        # Local development uchun har doim ruxsat berish
+        is_development = DEBUG or app.debug or os.getenv('FLASK_ENV') == 'development' or not os.getenv('BOT_TOKEN')
+        if is_development:
             test_user_id = 123456789
             ensure_test_user_exists(test_user_id)
             session['user_id'] = test_user_id
@@ -120,7 +313,8 @@ def check_telegram_auth():
 
     except ValueError as e:
         # Development mode: Agar validatsiya muvaffaqiyatsiz bo'lsa, test user_id bilan ishlash
-        if DEBUG or app.debug:
+        is_development = DEBUG or app.debug or os.getenv('FLASK_ENV') == 'development' or not os.getenv('BOT_TOKEN')
+        if is_development:
             test_user_id = 123456789
             ensure_test_user_exists(test_user_id)
             session['user_id'] = test_user_id
@@ -134,15 +328,23 @@ def check_telegram_auth():
 @app.route('/api/check-plan', methods=['GET'])
 def check_plan():
     """User'ning business plan'ini tekshirish"""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'has_business_plan': False, 'redirect': BUSINESS_PLAN_REDIRECT_URL}), 200
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({
+                'success': True,
+                'has_business_plan': False, 
+                'redirect': BUSINESS_PLAN_REDIRECT_URL
+            }), 200
 
-    has_plan = check_business_plan(user_id)
-    return jsonify({
-        'has_business_plan': has_plan,
-        'redirect': BUSINESS_PLAN_REDIRECT_URL if not has_plan else None
-    })
+        has_plan = check_business_plan(user_id)
+        return jsonify({
+            'success': True,
+            'has_business_plan': has_plan,
+            'redirect': BUSINESS_PLAN_REDIRECT_URL if not has_plan else None
+        })
+    except Exception as e:
+        return handle_api_error(e, 'Business plan tekshirishda xatolik')
 
 @app.route('/')
 @app.route('/warehouse')
@@ -164,6 +366,9 @@ def index():
 def get_products():
     """Barcha mahsulotlarni olish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
@@ -173,15 +378,23 @@ def get_products():
             )
             products = cursor.fetchall()
         connection.close()
-        return jsonify({'success': True, 'data': products})
+        return jsonify({'success': True, 'data': products or []})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Mahsulotlarni yuklashda xatolik')
 
 @app.route('/api/warehouse/products', methods=['POST'])
 def create_product():
     """Yangi mahsulot yaratish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Ma\'lumotlar topilmadi'}), 400
+    
+    if not data.get('name'):
+        return jsonify({'success': False, 'error': 'Mahsulot nomi talab qilinadi'}), 400
     
     try:
         product_id = execute_query(
@@ -194,13 +407,18 @@ def create_product():
         )
         return jsonify({'success': True, 'data': {'id': product_id}})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Mahsulot yaratishda xatolik')
 
 @app.route('/api/warehouse/products/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
     """Mahsulotni yangilash"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Ma\'lumotlar topilmadi'}), 400
     
     try:
         execute_query(
@@ -215,12 +433,14 @@ def update_product(product_id):
         )
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Mahsulotni yangilashda xatolik')
 
 @app.route('/api/warehouse/products/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
     """Mahsulotni o'chirish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
     
     try:
         execute_query(
@@ -229,12 +449,15 @@ def delete_product(product_id):
         )
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Mahsulotni o\'chirishda xatolik')
 
 @app.route('/api/warehouse/movements', methods=['GET'])
 def get_movements():
     """Ombor harakatlarini olish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     product_id = request.args.get('product_id')
     
     try:
@@ -261,15 +484,23 @@ def get_movements():
                 )
             movements = cursor.fetchall()
         connection.close()
-        return jsonify({'success': True, 'data': movements})
+        return jsonify({'success': True, 'data': movements or []})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Ombor harakatlarini yuklashda xatolik')
 
 @app.route('/api/warehouse/movements', methods=['POST'])
 def create_movement():
     """Yangi ombor harakati yaratish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Ma\'lumotlar topilmadi'}), 400
+    
+    if not data.get('product_id') or not data.get('movement_type') or not data.get('quantity'):
+        return jsonify({'success': False, 'error': 'Barcha majburiy maydonlar to\'ldirilishi kerak'}), 400
     
     try:
         connection = get_db_connection()
@@ -299,7 +530,7 @@ def create_movement():
         connection.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Ombor harakati yaratishda xatolik')
 
 # ===== TRANSACTIONS API =====
 
@@ -307,7 +538,12 @@ def create_movement():
 def get_transactions():
     """Tranzaksiyalarni olish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     limit = request.args.get('limit', 50, type=int)
+    if limit > 1000:
+        limit = 1000  # Maximum limit
     
     try:
         connection = get_db_connection()
@@ -321,9 +557,9 @@ def get_transactions():
             )
             transactions = cursor.fetchall()
         connection.close()
-        return jsonify({'success': True, 'data': transactions})
+        return jsonify({'success': True, 'data': transactions or []})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Tranzaksiyalarni yuklashda xatolik')
 
 # ===== REPORTS API =====
 
@@ -331,7 +567,12 @@ def get_transactions():
 def get_reports_summary():
     """Hisobotlar summary"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     period = request.args.get('period', 'month')  # day, week, month, year
+    if period not in ['day', 'week', 'month', 'year']:
+        period = 'month'
     
     try:
         connection = get_db_connection()
@@ -386,13 +627,13 @@ def get_reports_summary():
         return jsonify({
             'success': True,
             'data': {
-                'summary': summary,
-                'top_categories': top_categories,
-                'warehouse_stats': warehouse_stats
+                'summary': summary or {},
+                'top_categories': top_categories or [],
+                'warehouse_stats': warehouse_stats or {}
             }
         })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Hisobotlarni yuklashda xatolik')
 
 # ===== EMPLOYEES API =====
 
@@ -400,6 +641,8 @@ def get_reports_summary():
 def get_employees():
     """Barcha xodimlarni olish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
     
     try:
         connection = get_db_connection()
@@ -410,15 +653,23 @@ def get_employees():
             )
             employees = cursor.fetchall()
         connection.close()
-        return jsonify({'success': True, 'data': employees})
+        return jsonify({'success': True, 'data': employees or []})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Xodimlarni yuklashda xatolik')
 
 @app.route('/api/employees', methods=['POST'])
 def create_employee():
     """Yangi xodim qo'shish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Ma\'lumotlar topilmadi'}), 400
+    
+    if not data.get('name'):
+        return jsonify({'success': False, 'error': 'Xodim nomi talab qilinadi'}), 400
     
     try:
         employee_id = execute_query(
@@ -428,13 +679,18 @@ def create_employee():
         )
         return jsonify({'success': True, 'data': {'id': employee_id}})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Xodim yaratishda xatolik')
 
 @app.route('/api/employees/<int:employee_id>', methods=['PUT'])
 def update_employee(employee_id):
     """Xodimni yangilash"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Ma\'lumotlar topilmadi'}), 400
     
     try:
         execute_query(
@@ -445,12 +701,14 @@ def update_employee(employee_id):
         )
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Xodimni yangilashda xatolik')
 
 @app.route('/api/employees/<int:employee_id>', methods=['DELETE'])
 def delete_employee(employee_id):
     """Xodimni o'chirish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
     
     try:
         execute_query(
@@ -459,13 +717,18 @@ def delete_employee(employee_id):
         )
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Xodimni o\'chirishda xatolik')
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
     """Vazifalarni olish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     status = request.args.get('status')
+    if status and status not in ['pending', 'in_progress', 'completed', 'cancelled']:
+        status = None
     
     try:
         connection = get_db_connection()
@@ -490,15 +753,23 @@ def get_tasks():
                 )
             tasks = cursor.fetchall()
         connection.close()
-        return jsonify({'success': True, 'data': tasks})
+        return jsonify({'success': True, 'data': tasks or []})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Vazifalarni yuklashda xatolik')
 
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     """Yangi vazifa yaratish"""
     user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 401
+    
     data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Ma\'lumotlar topilmadi'}), 400
+    
+    if not data.get('title'):
+        return jsonify({'success': False, 'error': 'Vazifa sarlavhasi talab qilinadi'}), 400
     
     try:
         task_id = execute_query(
@@ -509,7 +780,7 @@ def create_task():
         )
         return jsonify({'success': True, 'data': {'id': task_id}})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return handle_api_error(e, 'Vazifa yaratishda xatolik')
 
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
@@ -872,7 +1143,14 @@ def generate_ai_response(user_id, message):
                     avg_income = sum(incomes) / len(incomes)
                     growth = ((incomes[0] - incomes[-1]) / incomes[-1] * 100) if incomes[-1] > 0 else 0
 
-                    return f"📊 So'nggi 3 oy tahlili:\n💰 O'rtacha kirim: {avg_income:,.0f} UZS\n📈 O'sish sur'ati: {growth:+.1f}%\n\n{'🚀 Biznesingiz rivojlanmoqda!' if growth > 5 else '⚠️ O'sish sur\'atini oshirish tavsiya etiladi.' if growth > 0 else '🚨 Kirimlar kamaymoqda, strategiyani ko\'rib chiqing!'}"
+                    if growth > 5:
+                        message = "🚀 Biznesingiz rivojlanmoqda!"
+                    elif growth > 0:
+                        message = "⚠️ O'sish sur'atini oshirish tavsiya etiladi."
+                    else:
+                        message = "🚨 Kirimlar kamaymoqda, strategiyani ko'rib chiqing!"
+
+                    return f"📊 So'nggi 3 oy tahlili:\n💰 O'rtacha kirim: {avg_income:,.0f} UZS\n📈 O'sish sur'ati: {growth:+.1f}%\n\n{message}"
 
         elif any(word in message for word in ['eng', 'top', 'yaxshi', 'ko\'p sotilgan']):
             with connection.cursor() as cursor:

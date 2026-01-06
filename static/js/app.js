@@ -64,13 +64,46 @@ async function apiRequest(endpoint, options = {}, useCache = true) {
                 ...options.headers
             }
         });
+
+        // Response status tekshirish
+        if (!response.ok) {
+            // 401 yoki 403 - autentifikatsiya xatoligi
+            if (response.status === 401 || response.status === 403) {
+                console.error('Autentifikatsiya xatoligi:', response.status);
+
+                // JSON'dan redirect URL'ni olishga harakat qilish
+                try {
+                    const errorData = await response.json();
+                    if (errorData.redirect) {
+                        // Redirect qilish
+                        if (window.tg && window.tg.openLink) {
+                            window.tg.openLink(errorData.redirect);
+                        } else {
+                            window.location.href = errorData.redirect;
+                        }
+                    }
+                    return { success: false, error: errorData.error || 'Autentifikatsiya xatoligi', status: response.status };
+                } catch (e) {
+                    return { success: false, error: 'Autentifikatsiya xatoligi', status: response.status };
+                }
+            }
+
+            // Boshqa xatoliklar
+            try {
+                const errorData = await response.json();
+                return { success: false, error: errorData.error || `Server xatoligi: ${response.status}`, status: response.status };
+            } catch (e) {
+                return { success: false, error: `Server xatoligi: ${response.status}`, status: response.status };
+            }
+        }
+
         const data = await response.json();
-        
+
         // Cache'ga saqlash
         if (useCache && data.success) {
             dataCache.set(endpoint, data);
         }
-        
+
         return data;
     } catch (error) {
         console.error('API request error:', error);

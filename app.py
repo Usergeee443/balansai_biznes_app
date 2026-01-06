@@ -157,25 +157,25 @@ def check_telegram_auth():
     # Static fayllar uchun auth talab qilinmaydi
     if request.path.startswith('/static'):
         return None
-    
+
     # HTML sahifalar uchun business plan tekshirish va redirect
     if request.path in ['/', '/warehouse', '/reports', '/employees', '/ai-chat']:
         init_data = request.headers.get('X-Telegram-Init-Data') or request.args.get('initData')
-        
+
         # Development mode: Agar initData bo'lmasa
         is_development = DEBUG or app.debug or os.getenv('FLASK_ENV') == 'development' or not os.getenv('BOT_TOKEN')
-        
+
         if init_data:
             try:
                 user_data = validate_telegram_init_data(init_data, BOT_TOKEN)
                 user_id = user_data.get('user_id')
                 session['user_id'] = user_id
                 session['username'] = user_data.get('username')
-                
+
                 # Business plan tekshirish - MUHIM!
                 has_business_plan = check_business_plan(user_id)
                 session['has_business_plan'] = has_business_plan
-                
+
                 # Agar business plan bo'lmasa, darhol redirect qilish
                 if not has_business_plan and not is_development:
                     # JavaScript orqali redirect qiladigan sahifa yuborish
@@ -184,24 +184,82 @@ def check_telegram_auth():
                     <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>Redirecting...</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Yo'naltirilmoqda...</title>
                         <script src="https://telegram.org/js/telegram-web-app.js"></script>
+                        <style>
+                            body {{
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100vh;
+                                margin: 0;
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                background: #1C1C1E;
+                                color: #FFFFFF;
+                            }}
+                            .message {{
+                                text-align: center;
+                                padding: 20px;
+                            }}
+                            .spinner {{
+                                border: 3px solid rgba(255,255,255,0.3);
+                                border-radius: 50%;
+                                border-top: 3px solid #007AFF;
+                                width: 40px;
+                                height: 40px;
+                                animation: spin 1s linear infinite;
+                                margin: 0 auto 20px;
+                            }}
+                            @keyframes spin {{
+                                0% {{ transform: rotate(0deg); }}
+                                100% {{ transform: rotate(360deg); }}
+                            }}
+                        </style>
                     </head>
                     <body>
+                        <div class="message">
+                            <div class="spinner"></div>
+                            <p>Bu ilova faqat Biznes tarifi uchun!</p>
+                            <p>Yo'naltirilmoqda...</p>
+                        </div>
                         <script>
-                            if (window.Telegram && window.Telegram.WebApp) {{
-                                window.Telegram.WebApp.openLink('{BUSINESS_PLAN_REDIRECT_URL}');
-                            }} else {{
-                                window.location.href = '{BUSINESS_PLAN_REDIRECT_URL}';
+                            console.log('Business plan yo\'q, redirect...');
+
+                            // Telegram WebApp ready bo'lishini kutish
+                            function redirectToMain() {{
+                                const url = '{BUSINESS_PLAN_REDIRECT_URL}';
+
+                                if (window.Telegram && window.Telegram.WebApp) {{
+                                    try {{
+                                        // Telegram WebApp orqali ochish
+                                        window.Telegram.WebApp.ready();
+                                        window.Telegram.WebApp.openLink(url);
+
+                                        // Agar 2 soniyadan keyin redirect bo'lmasa, window.location ishlatish
+                                        setTimeout(function() {{
+                                            window.location.href = url;
+                                        }}, 2000);
+                                    }} catch (e) {{
+                                        console.error('Telegram WebApp error:', e);
+                                        window.location.href = url;
+                                    }}
+                                }} else {{
+                                    // Oddiy browser'da
+                                    window.location.href = url;
+                                }}
                             }}
+
+                            // Darhol redirect qilish
+                            redirectToMain();
                         </script>
-                        <p>Yo'naltirilmoqda...</p>
                     </body>
                     </html>
                     """
-                    return make_response(redirect_html)
-                    
+                    return make_response(redirect_html), 403
+
             except (ValueError, Exception) as e:
+                print(f"Telegram auth xatoligi: {{e}}")
                 # Development mode
                 if is_development:
                     test_user_id = 123456789
@@ -216,22 +274,47 @@ def check_telegram_auth():
                     <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>Redirecting...</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Xatolik</title>
                         <script src="https://telegram.org/js/telegram-web-app.js"></script>
+                        <style>
+                            body {{
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100vh;
+                                margin: 0;
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                background: #1C1C1E;
+                                color: #FFFFFF;
+                            }}
+                            .message {{
+                                text-align: center;
+                                padding: 20px;
+                            }}
+                        </style>
                     </head>
                     <body>
+                        <div class="message">
+                            <p>Autentifikatsiya xatoligi</p>
+                            <p>Yo'naltirilmoqda...</p>
+                        </div>
                         <script>
+                            const url = '{BUSINESS_PLAN_REDIRECT_URL}';
                             if (window.Telegram && window.Telegram.WebApp) {{
-                                window.Telegram.WebApp.openLink('{BUSINESS_PLAN_REDIRECT_URL}');
+                                window.Telegram.WebApp.ready();
+                                window.Telegram.WebApp.openLink(url);
+                                setTimeout(function() {{
+                                    window.location.href = url;
+                                }}, 2000);
                             }} else {{
-                                window.location.href = '{BUSINESS_PLAN_REDIRECT_URL}';
+                                window.location.href = url;
                             }}
                         </script>
-                        <p>Yo'naltirilmoqda...</p>
                     </body>
                     </html>
                     """
-                    return make_response(redirect_html)
+                    return make_response(redirect_html), 401
         else:
             # Development mode: Agar initData bo'lmasa
             if is_development:
@@ -247,22 +330,47 @@ def check_telegram_auth():
                 <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>Redirecting...</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Yo'naltirilmoqda...</title>
                     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+                    <style>
+                        body {{
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            margin: 0;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            background: #1C1C1E;
+                            color: #FFFFFF;
+                        }}
+                        .message {{
+                            text-align: center;
+                            padding: 20px;
+                        }}
+                    </style>
                 </head>
                 <body>
+                    <div class="message">
+                        <p>Bu ilova faqat Telegram Mini App orqali ochiladi</p>
+                        <p>Yo'naltirilmoqda...</p>
+                    </div>
                     <script>
+                        const url = '{BUSINESS_PLAN_REDIRECT_URL}';
                         if (window.Telegram && window.Telegram.WebApp) {{
-                            window.Telegram.WebApp.openLink('{BUSINESS_PLAN_REDIRECT_URL}');
+                            window.Telegram.WebApp.ready();
+                            window.Telegram.WebApp.openLink(url);
+                            setTimeout(function() {{
+                                window.location.href = url;
+                            }}, 2000);
                         }} else {{
-                            window.location.href = '{BUSINESS_PLAN_REDIRECT_URL}';
+                            window.location.href = url;
                         }}
                     </script>
-                    <p>Yo'naltirilmoqda...</p>
                 </body>
                 </html>
                 """
-                return make_response(redirect_html)
+                return make_response(redirect_html), 401
         return None
 
     # API endpoint'lar uchun auth talab qilinadi
@@ -282,8 +390,10 @@ def check_telegram_auth():
             session['user_id'] = test_user_id
             session['username'] = 'test_user'
             session['has_business_plan'] = True  # Development'da hamma ruxsat
+            print("Development mode: test user yaratildi")
             return None
-        return jsonify({'error': 'Telegram auth talab qilinadi'}), 401
+        print("Production mode: initData yo'q, 401 qaytarilmoqda")
+        return jsonify({'error': 'Telegram auth talab qilinadi', 'redirect': BUSINESS_PLAN_REDIRECT_URL}), 401
 
     try:
         user_data = validate_telegram_init_data(init_data, BOT_TOKEN)
@@ -295,14 +405,20 @@ def check_telegram_auth():
         has_business_plan = check_business_plan(user_id)
         session['has_business_plan'] = has_business_plan
 
+        print(f"API request: user_id={user_id}, has_business_plan={has_business_plan}, path={request.path}")
+
         # Agar business plan bo'lmasa, faqat check-plan endpoint'ga ruxsat
         if not has_business_plan and request.path != '/api/check-plan':
+            print(f"Business plan yo'q: user_id={user_id}, redirect={BUSINESS_PLAN_REDIRECT_URL}")
             return jsonify({
-                'error': 'Business plan talab qilinadi',
-                'redirect': BUSINESS_PLAN_REDIRECT_URL
+                'success': False,
+                'error': 'Bu ilova faqat Biznes tarifi uchun. Iltimos, Biznes tarifiga o\'ting.',
+                'redirect': BUSINESS_PLAN_REDIRECT_URL,
+                'has_business_plan': False
             }), 403
 
     except ValueError as e:
+        print(f"Telegram validatsiya xatoligi: {e}")
         # Development mode: Agar validatsiya muvaffaqiyatsiz bo'lsa, test user_id bilan ishlash
         is_development = DEBUG or app.debug or os.getenv('FLASK_ENV') == 'development' or not os.getenv('BOT_TOKEN')
         if is_development:
@@ -311,8 +427,9 @@ def check_telegram_auth():
             session['user_id'] = test_user_id
             session['username'] = 'test_user'
             session['has_business_plan'] = True
+            print("Development mode: validatsiya xatoligi, test user yaratildi")
             return None
-        return jsonify({'error': str(e)}), 401
+        return jsonify({'error': 'Telegram autentifikatsiya xatoligi', 'redirect': BUSINESS_PLAN_REDIRECT_URL}), 401
 
 # ==================== ROUTES ====================
 
